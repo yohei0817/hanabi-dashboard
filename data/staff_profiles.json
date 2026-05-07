@@ -1,0 +1,11 @@
+{
+  "_comment": "Staff profile metadata. Photo files live in docs/assets/staff/{photo}",
+  "_format": {
+    "name": "(staff name as it appears in CSV, e.g. '渡辺 真也')",
+    "photo": "(filename in docs/assets/staff/, e.g. '渡辺.jpg')",
+    "display_name": "(optional override, e.g. 'マサヤ')",
+    "joined": "YYYY-MM-DD",
+    "role": "店長 / トップ / etc"
+  },
+  "profiles": {}
+}
