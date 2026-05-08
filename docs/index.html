@@ -198,7 +198,7 @@
       <div style="height: 260px;"><canvas id="dailySalesChart"></canvas></div>
     </div>
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">部門別 月次予算 vs 実績 <span class="section-sub">ELLE by Hanabi 宮古島店</span></h3>
+      <h3 class="section-title mb-3">月次予算 vs 実績 <span class="section-sub">店舗別 + 部門別</span></h3>
       <div id="deptBudgetTable"></div>
     </div>
   </div>
@@ -795,48 +795,100 @@ function renderSalesTab() {
 }
 
 function renderDeptBudgetTable() {
-  // 宮古島限定 (綱島はヘア専門のため部門別予算なし)
-  const eleMs = (DATA.monthly_by_store.miyakojima || {})[currentMonth];
-  const annualBudget = (DATA.budgets || {}).annual?.by_dept_miyakojima || {};
   const root = document.getElementById("deptBudgetTable");
-  if (!eleMs) { root.innerHTML = "<div class='text-gray-500 text-sm p-4'>データなし</div>"; return; }
-  const total = ["ヘア","アイ","ネイル"].reduce((a,d) => a + eleMs.by_dept[d].sales, 0);
+  const tsuMs = (DATA.monthly_by_store.tsunashima || {})[currentMonth];
+  const eleMs = (DATA.monthly_by_store.miyakojima || {})[currentMonth];
+  const tsuTarget = ((DATA.target_by_store || {}).tsunashima || {})[currentMonth] || 0;
+  const eleTarget = ((DATA.target_by_store || {}).miyakojima || {})[currentMonth] || 0;
+  const monthDeptBudget = ((DATA.budgets || {}).monthly_dept_miyakojima || {})[currentMonth] || {};
+
+  const tsuRow = SCOPE.storeRows.find(r => r.sid === "tsunashima");
+  const eleRow = SCOPE.storeRows.find(r => r.sid === "miyakojima");
+
+  const buildRow = (opts) => {
+    const { label, indent, sales, target, share, color, isStoreRow } = opts;
+    const expected = target * (SCOPE.globalElapsedDays / SCOPE.daysInMonth);
+    const monthPct = target ? (sales / target * 100) : 0;
+    const pacePctV = expected ? (sales / expected * 100) : 0;
+    const projection = SCOPE.globalElapsedDays ? Math.round(sales / SCOPE.globalElapsedDays * SCOPE.daysInMonth) : 0;
+    const projDelta = projection - target;
+    const w = target ? Math.min(100, sales/target*100) : 0;
+    const labelCell = isStoreRow
+      ? `<td class="py-3 pr-3 font-bold">${label}</td>`
+      : `<td class="py-3 pr-3" style="padding-left:1.5rem"><span class="badge" style="background:${color}22; color:${color}; border:1px solid ${color}40">${label}</span></td>`;
+    return `<tr class="border-row ${isStoreRow ? 'bg-gray-50' : ''}">
+      ${labelCell}
+      <td class="text-right py-3 px-3 kpi-num font-semibold">${fmt(sales)}</td>
+      <td class="text-right py-3 px-3 kpi-num text-gray-600">${fmt(target)}</td>
+      <td class="text-right py-3 px-3">
+        <div class="flex items-center justify-end gap-2">
+          <div class="bg-gray-100 rounded-full h-1.5 w-16 overflow-hidden"><div class="h-full" style="width:${w}%; background:${pctColor(monthPct)}"></div></div>
+          <span class="kpi-num font-semibold ${pctClass(monthPct)} w-12">${monthPct.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td class="text-right py-3 px-3 kpi-num font-semibold ${pctClass(pacePctV)}">${pacePctV.toFixed(1)}%</td>
+      <td class="text-right py-3 px-3">
+        <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
+        <div class="text-[10px] ${projDelta>=0?'pct-good':'pct-bad'}">${projDelta>=0?'+':''}${fmtN(projDelta)}</div>
+      </td>
+      <td class="text-right py-3 pl-3 kpi-num text-gray-500">${share}</td>
+    </tr>`;
+  };
+
+  // Total store sales (for company composition)
+  const companyTotal = (tsuRow?.sales || 0) + (eleRow?.sales || 0);
+
+  let rows = "";
+  // Hanabi 綱島
+  if (tsuRow) {
+    rows += buildRow({
+      label: "Hanabi 綱島店",
+      sales: tsuRow.sales, target: tsuTarget,
+      share: companyTotal ? (tsuRow.sales/companyTotal*100).toFixed(1)+"%" : "—",
+      isStoreRow: true,
+    });
+  }
+  // ELLE 宮古島 (合計)
+  if (eleRow) {
+    rows += buildRow({
+      label: "ELLE by Hanabi 宮古島店",
+      sales: eleRow.sales, target: eleTarget,
+      share: companyTotal ? (eleRow.sales/companyTotal*100).toFixed(1)+"%" : "—",
+      isStoreRow: true,
+    });
+    // ELLE depts
+    if (eleMs) {
+      const eleStoreTotal = ["ヘア","アイ","ネイル"].reduce((a,d)=>a+eleMs.by_dept[d].sales, 0);
+      ["ヘア","アイ","ネイル"].forEach(d => {
+        const sales = eleMs.by_dept[d].sales;
+        const target = monthDeptBudget[d] || 0;
+        const color = d==="ヘア" ? "var(--dept-hair)" : d==="アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
+        rows += buildRow({
+          label: d, indent: true, color,
+          sales, target,
+          share: eleStoreTotal ? (sales/eleStoreTotal*100).toFixed(1)+"% (店舗内)" : "—",
+        });
+      });
+    }
+  }
+
   root.innerHTML = `
-    <div class="text-xs text-gray-500 mb-3">対象: ELLE by Hanabi 宮古島店 (Hanabi 綱島店はヘア専門のため部門別予算なし)</div>
-    <table class="w-full text-sm">
-      <thead class="text-xs text-gray-500">
-        <tr class="border-row">
-          <th class="text-left py-2 pr-3">部門</th>
-          <th class="text-right py-2 px-3">当月実績</th>
-          <th class="text-right py-2 px-3">年予算 (FY26)</th>
-          <th class="text-right py-2 px-3">月平均予算</th>
-          <th class="text-right py-2 px-3">月達成</th>
-          <th class="text-right py-2 px-3">進捗ペース</th>
-          <th class="text-right py-2 pl-3">構成比</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${["ヘア","アイ","ネイル"].map(d => {
-          const sales = eleMs.by_dept[d].sales;
-          const fyAnnual = annualBudget[d] || 0;
-          const monthly = fyAnnual ? fyAnnual / 12 : 0;
-          const expected = monthly * (SCOPE.globalElapsedDays / SCOPE.daysInMonth);
-          const monthPct = monthly ? (sales / monthly * 100) : 0;
-          const pacePctV = expected ? (sales / expected * 100) : 0;
-          const share = total ? (sales/total*100).toFixed(1) : 0;
-          const color = d==="ヘア" ? "var(--dept-hair)" : d==="アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
-          return `<tr class="border-row">
-            <td class="py-3 pr-3"><span class="badge" style="background:${color}22; color:${color}; border:1px solid ${color}40">${d}</span></td>
-            <td class="text-right py-3 px-3 kpi-num font-semibold">${fmt(sales)}</td>
-            <td class="text-right py-3 px-3 kpi-num text-gray-600">${fmt(fyAnnual)}</td>
-            <td class="text-right py-3 px-3 kpi-num text-gray-600">${fmt(Math.round(monthly))}</td>
-            <td class="text-right py-3 px-3 kpi-num text-gray-500">${monthPct.toFixed(1)}%</td>
-            <td class="text-right py-3 px-3 kpi-num font-semibold ${pctClass(pacePctV)}">${pacePctV.toFixed(1)}%</td>
-            <td class="text-right py-3 pl-3 kpi-num text-gray-500">${share}%</td>
-          </tr>`;
-        }).join("")}
-      </tbody>
-    </table>`;
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" style="min-width:780px">
+        <thead class="text-xs text-gray-500">
+          <tr class="border-row">
+            <th class="text-left py-2 pr-3 font-medium">店舗 / 部門</th>
+            <th class="text-right py-2 px-3 font-medium">当月実績</th>
+            <th class="text-right py-2 px-3 font-medium">月予算</th>
+            <th class="text-right py-2 px-3 font-medium">月達成</th>
+            <th class="text-right py-2 px-3 font-medium">進捗ペース</th>
+            <th class="text-right py-2 px-3 font-medium">月末予測</th>
+            <th class="text-right py-2 pl-3 font-medium">構成比</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 // ========== Tab 3: Visits ==========
