@@ -91,24 +91,24 @@
 
 <!-- Login overlay -->
 <div id="loginOverlay" class="login-overlay">
-  <div class="card max-w-sm w-full mx-4 p-8">
-    <div class="text-center mb-6 py-4 rounded-lg" style="background:#0A0A0A">
-      <img src="assets/hanabi-logo.png" alt="HANABI" class="h-10 w-auto mx-auto" />
-      <div class="text-[10px] tracking-[0.25em] text-gray-500 mt-2">DASHBOARD</div>
+  <div class="max-w-sm w-full mx-4 p-8 rounded-2xl" style="background:#0A0A0A; border:1px solid #1f1f1f">
+    <div class="text-center mb-8">
+      <img src="assets/hanabi-logo.png" alt="HANABI" class="h-12 w-auto mx-auto" />
     </div>
     <form id="loginForm" class="space-y-3">
       <div>
-        <label class="block text-xs text-gray-500 mb-1">ID</label>
-        <input type="text" id="loginId" autocomplete="username" autofocus class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+        <label class="block text-xs text-gray-500 mb-1.5">ID</label>
+        <input type="text" id="loginId" autocomplete="username" autofocus class="w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/40" style="background:#1a1a1a; border:1px solid #2a2a2a" />
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">パスワード</label>
-        <input type="password" id="loginPw" autocomplete="current-password" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+        <label class="block text-xs text-gray-500 mb-1.5">パスワード</label>
+        <input type="password" id="loginPw" autocomplete="current-password" class="w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/40" style="background:#1a1a1a; border:1px solid #2a2a2a" />
       </div>
-      <div id="loginError" class="text-xs text-red-600 hidden">IDまたはパスワードが違います</div>
-      <button type="submit" class="w-full rounded-lg py-2.5 px-4 bg-black text-white text-sm font-semibold hover:opacity-90">ログイン</button>
+      <div id="loginError" class="text-xs text-red-400 hidden">IDまたはパスワードが違います</div>
+      <button type="submit" class="w-full rounded-lg py-2.5 px-4 text-sm font-semibold mt-2 hover:opacity-90" style="background:#fff; color:#0A0A0A">ログイン</button>
     </form>
-    <div class="text-[10px] text-gray-400 mt-6 text-center">※ 一度ログインすると24時間有効</div>
+    <div class="firework-gradient h-0.5 mt-7 rounded-full opacity-60"></div>
+    <div class="text-[10px] text-gray-500 mt-3 text-center">一度ログインすると24時間有効</div>
   </div>
 </div>
 
