@@ -234,12 +234,6 @@
     <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
       <span class="text-xs text-gray-500">期間</span>
       <select id="menuPeriodSel" class="border border-gray-300 rounded px-2 py-1 text-sm"></select>
-      <span class="text-xs text-gray-500 ml-3">店舗</span>
-      <select id="menuStoreSel" class="border border-gray-300 rounded px-2 py-1 text-sm">
-        <option value="all">全社合算</option>
-        <option value="tsunashima">Hanabi 綱島店</option>
-        <option value="miyakojima">ELLE by Hanabi 宮古島店</option>
-      </select>
       <span class="text-xs text-gray-500 ml-3">並び</span>
       <select id="menuSortSel" class="border border-gray-300 rounded px-2 py-1 text-sm">
         <option value="total_price">売上</option>
@@ -249,10 +243,7 @@
       </select>
       <span class="ml-auto text-[11px] text-gray-400" id="menuStatus"></span>
     </div>
-    <div class="card p-4 mb-4 overflow-x-auto">
-      <div class="text-xs font-semibold text-gray-500 mb-2">商品別 ランキング (上位30)</div>
-      <div id="menuRankingTable"></div>
-    </div>
+    <div id="menuSections" class="space-y-4"></div>
   </div>
 
   <!-- =========== Tab 6: 採用 (placeholder) =========== -->
@@ -533,9 +524,26 @@ function renderTopKpi() {
   `).join("");
 }
 
+function deptOfCategory(cat) {
+  if (!cat) return "ヘア";
+  // Eye: I-prefix categories or contains まつげ
+  if (cat.startsWith("I") || cat.includes("まつげ")) return "アイ";
+  // Nail: N-prefix or specific nail menus
+  if (cat.startsWith("N") || cat === "ジェル" || cat === "アート" || cat === "ケアカラー") return "ネイル";
+  return "ヘア";
+}
+
+function prevMonthOf(period) {
+  if (!/^\d{6}$/.test(period)) return null;
+  const y = parseInt(period.slice(0,4));
+  const m = parseInt(period.slice(4,6));
+  const py = m === 1 ? y - 1 : y;
+  const pm = m === 1 ? 12 : m - 1;
+  return `${py}${String(pm).padStart(2,"0")}`;
+}
+
 function renderMenuTab() {
   const periodSel = document.getElementById("menuPeriodSel");
-  const storeSel = document.getElementById("menuStoreSel");
   const sortSel = document.getElementById("menuSortSel");
   if (!periodSel) return;
   const menuData = DATA.menu_data || {};
@@ -544,91 +552,58 @@ function renderMenuTab() {
     document.getElementById("menuStatus").textContent = "データなし。scripts/scrape_menu.py を実行してください";
     return;
   }
-  // Populate period dropdown if empty
   if (!periodSel.children.length) {
     labels.forEach(l => {
       const o = document.createElement("option");
       o.value = l; o.textContent = l;
       periodSel.appendChild(o);
     });
-    periodSel.value = labels[labels.length - 1];  // default to latest
-    [periodSel, storeSel, sortSel].forEach(s => s.addEventListener("change", drawMenu));
+    periodSel.value = "FY25_annual" in menuData ? "FY25_annual" : labels[labels.length - 1];
+    [periodSel, sortSel].forEach(s => s.addEventListener("change", drawMenu));
   }
   drawMenu();
 }
 
-function drawMenu() {
-  const period = document.getElementById("menuPeriodSel").value;
-  const store = document.getElementById("menuStoreSel").value;
-  const sortKey = document.getElementById("menuSortSel").value;
+function getMenuRowsForScope(period, sid, deptFilter) {
   const menuData = DATA.menu_data || {};
-  const periodData = menuData[period] || {};
-  // Aggregate rows
-  let rows = [];
-  if (store === "all") {
-    // Merge tsunashima + miyakojima by commodity_name
-    const merged = {};
-    for (const sid of ["tsunashima", "miyakojima"]) {
-      for (const r of (periodData[sid] || [])) {
-        const key = r.category_status_name + "::" + r.commodity_name;
-        if (!merged[key]) {
-          merged[key] = { ...r, count: 0, total_price: 0, prev_total_price: 0 };
-        }
-        merged[key].count = (parseInt(merged[key].count) || 0) + (parseInt(r.count) || 0);
-        merged[key].total_price = (parseInt(merged[key].total_price) || 0) + (parseInt(r.total_price) || 0);
-        merged[key].prev_total_price = (parseInt(merged[key].prev_total_price) || 0) + (parseInt(r.prev_total_price) || 0);
-      }
-    }
-    rows = Object.values(merged);
-    // Recalculate unit_price, year_on_year
-    for (const r of rows) {
-      r.unit_price = r.count ? Math.round(r.total_price / r.count) : 0;
-      r.year_on_year_price = r.prev_total_price ? (r.total_price / r.prev_total_price * 100).toFixed(1) + "%" : "—";
-    }
-  } else {
-    rows = (periodData[store] || []).map(r => ({...r}));
+  const rows = ((menuData[period] || {})[sid] || []).map(r => ({...r}));
+  // Build prev month lookup
+  const prevPeriod = prevMonthOf(period);
+  const prevRows = prevPeriod ? ((menuData[prevPeriod] || {})[sid] || []) : [];
+  const prevMap = {};
+  for (const pr of prevRows) {
+    const k = (pr.category_status_name || "") + "::" + (pr.commodity_name || "");
+    prevMap[k] = pr;
   }
-  // Filter zeros (count and total_price both 0)
+  for (const r of rows) {
+    const k = (r.category_status_name || "") + "::" + (r.commodity_name || "");
+    const prev = prevMap[k];
+    if (prev) {
+      const cur = parseInt(r.total_price) || 0;
+      const pmv = parseInt(prev.total_price) || 0;
+      r.prev_month_price = pmv;
+      r.mom_pct = pmv ? (cur / pmv * 100) : null;
+    } else {
+      r.prev_month_price = 0;
+      r.mom_pct = null;
+    }
+  }
+  if (deptFilter) {
+    return rows.filter(r => deptOfCategory(r.category_status_name) === deptFilter);
+  }
+  return rows;
+}
+
+function buildMenuTable(rows, sortKey, limit = 20) {
   const validRows = rows.filter(r => parseInt(r.count) > 0 || parseInt(r.total_price) > 0);
-  // Sort
   const sortFn = sortKey === "year_on_year_price"
     ? (a, b) => (parseFloat(b.year_on_year_price) || 0) - (parseFloat(a.year_on_year_price) || 0)
     : (a, b) => (parseInt(b[sortKey]) || 0) - (parseInt(a[sortKey]) || 0);
   validRows.sort(sortFn);
-
-  // Status bar
-  document.getElementById("menuStatus").textContent = `${validRows.length}商品 / 期間 ${period}`;
-
-  // Category breakdown
-  const catTotals = {};
-  let grand = 0;
-  for (const r of rows) {
-    const cat = r.category_status_name || "未分類";
-    const v = parseInt(r.total_price) || 0;
-    catTotals[cat] = (catTotals[cat] || 0) + v;
-    grand += v;
-  }
-  const sortedCats = Object.entries(catTotals).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-  const catColors = ["#1E88E5","#E91E63","#F59E0B","#43A047","#8E24AA","#FF6B35","#29B6F6","#9CA3AF"];
-  const catEl = document.getElementById("menuCategoryBreakdown");
-  if (catEl) catEl.innerHTML = sortedCats.map(([cat, v], i) => {
-    const w = grand ? (v/grand*100).toFixed(1) : 0;
-    const c = catColors[i % catColors.length];
-    return `<div>
-      <div class="flex items-center text-xs">
-        <span class="w-3 h-3 rounded mr-2" style="background:${c}"></span>
-        <span class="flex-1 truncate">${cat}</span>
-        <span class="kpi-num font-semibold">${fmt(v)}</span>
-        <span class="text-[11px] text-gray-400 ml-2 w-12 text-right">${w}%</span>
-      </div>
-      <div class="progress-track mt-1"><div class="progress-fill" style="width:${w}%; background:${c}"></div></div>
-    </div>`;
-  }).join("");
-
-  // Top 30 ranking
-  const top30 = validRows.slice(0, 30);
-  const tbl = `
-    <table class="w-full text-sm" style="min-width:680px">
+  const top = validRows.slice(0, limit);
+  return `
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm" style="min-width:780px">
       <thead class="text-[11px] text-gray-500 border-b border-gray-100">
         <tr>
           <th class="text-left py-1.5 pr-2 w-8">#</th>
@@ -636,30 +611,73 @@ function drawMenu() {
           <th class="text-left py-1.5 pr-2">商品</th>
           <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='count'?'font-bold text-gray-900':''}">数量</th>
           <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='total_price'?'font-bold text-gray-900':''}">売上</th>
-          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='unit_price'?'font-bold text-gray-900':''}">平均単価</th>
-          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='year_on_year_price'?'font-bold text-gray-900':''}">前年比</th>
-          <th class="text-right py-1.5 pl-2 whitespace-nowrap">前年売上</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='unit_price'?'font-bold text-gray-900':''}">単価</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap">前月比</th>
+          <th class="text-right py-1.5 pl-2 whitespace-nowrap ${sortKey==='year_on_year_price'?'font-bold text-gray-900':''}">前年比</th>
         </tr>
       </thead>
       <tbody>
-        ${top30.map((r, i) => {
+        ${top.length === 0 ? `<tr><td colspan="8" class="text-center text-xs text-gray-400 py-4">該当データなし</td></tr>` : top.map((r, i) => {
           const yoy = r.year_on_year_price || "—";
           const yoyVal = parseFloat(yoy) || 0;
-          const yoyCls = yoyVal === 0 || yoy === "—" ? "text-gray-400" : yoyVal >= 100 ? "pct-good" : "pct-bad";
+          const yoyCls = !yoyVal || yoy === "—" || yoy === "0.0%" ? "text-gray-400" : yoyVal >= 100 ? "pct-good" : "pct-bad";
+          const mom = r.mom_pct;
+          const momStr = mom === null ? "—" : mom.toFixed(1) + "%";
+          const momCls = mom === null ? "text-gray-400" : mom >= 100 ? "pct-good" : "pct-bad";
+          const arrow = (val) => val === null ? "" : val >= 110 ? "▲" : val < 90 ? "▼" : "→";
           return `<tr class="border-b border-gray-50 hover:bg-gray-50">
             <td class="py-1.5 pr-2 rank-num text-center">${i+1}</td>
-            <td class="py-1.5 pr-2 text-[11px] text-gray-500">${r.category_status_name || ""}</td>
-            <td class="py-1.5 pr-2 truncate" style="max-width:200px">${r.commodity_name || ""}</td>
+            <td class="py-1.5 pr-2 text-[11px] text-gray-500 whitespace-nowrap">${r.category_status_name || ""}</td>
+            <td class="py-1.5 pr-2 truncate" style="max-width:240px">${r.commodity_name || ""}</td>
             <td class="py-1.5 px-2 text-right kpi-num font-semibold">${fmtN(r.count)}</td>
             <td class="py-1.5 px-2 text-right kpi-num font-semibold">${fmt(r.total_price)}</td>
             <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${fmt(r.unit_price)}</td>
-            <td class="py-1.5 px-2 text-right kpi-num font-semibold ${yoyCls}">${yoy}</td>
-            <td class="py-1.5 pl-2 text-right kpi-num text-gray-500">${fmt(r.prev_total_price)}</td>
+            <td class="py-1.5 px-2 text-right kpi-num font-semibold ${momCls} whitespace-nowrap">${arrow(mom)} ${momStr}</td>
+            <td class="py-1.5 pl-2 text-right kpi-num font-semibold ${yoyCls} whitespace-nowrap">${arrow(yoyVal)} ${yoy}</td>
           </tr>`;
         }).join("")}
       </tbody>
-    </table>`;
-  document.getElementById("menuRankingTable").innerHTML = tbl;
+    </table>
+    </div>`;
+}
+
+function drawMenu() {
+  const period = document.getElementById("menuPeriodSel").value;
+  const sortKey = document.getElementById("menuSortSel").value;
+  const status = document.getElementById("menuStatus");
+
+  // 5 scopes
+  const scopes = [
+    { title: "Hanabi 綱島店", subtitle: "ヘア専門", sid: "tsunashima", dept: null, headerCls: "hanabi-gradient" },
+    { title: "ELLE by Hanabi 宮古島店", subtitle: "全部門合算", sid: "miyakojima", dept: null, headerCls: "elle-gradient" },
+    { title: "ELLE 宮古島店 — ヘア部門", subtitle: "ヘア商品のみ", sid: "miyakojima", dept: "ヘア", headerCls: "elle-gradient" },
+    { title: "ELLE 宮古島店 — アイ部門", subtitle: "アイメニュー商品のみ", sid: "miyakojima", dept: "アイ", headerCls: "elle-gradient" },
+    { title: "ELLE 宮古島店 — ネイル部門", subtitle: "ネイル商品のみ", sid: "miyakojima", dept: "ネイル", headerCls: "elle-gradient" },
+  ];
+
+  const root = document.getElementById("menuSections");
+  const mom_available = !!prevMonthOf(period);
+  status.innerHTML = `期間 <strong>${period}</strong>${mom_available ? " · 前月比あり" : " · 前月比なし (annual/MTD)"}`;
+
+  root.innerHTML = scopes.map(sc => {
+    const rows = getMenuRowsForScope(period, sc.sid, sc.dept);
+    const totalSales = rows.reduce((a, r) => a + (parseInt(r.total_price) || 0), 0);
+    const totalCount = rows.reduce((a, r) => a + (parseInt(r.count) || 0), 0);
+    return `
+      <div class="card overflow-hidden">
+        <div class="${sc.headerCls} text-white px-4 py-3 flex items-center justify-between">
+          <div>
+            <div class="font-bold">${sc.title}</div>
+            <div class="text-xs opacity-80 mt-0.5">${sc.subtitle}</div>
+          </div>
+          <div class="text-right">
+            <div class="kpi-num text-base font-bold">${fmt(totalSales)}</div>
+            <div class="text-[11px] opacity-80">${fmtN(totalCount)}件</div>
+          </div>
+        </div>
+        <div class="p-4">${buildMenuTable(rows, sortKey, 20)}</div>
+      </div>`;
+  }).join("");
 }
 
 function renderRealtimeBanner() {
