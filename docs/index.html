@@ -412,7 +412,7 @@ function computeScope(month) {
     storeRows.push({ sid, store: stores[sid], ms, ds, vis, daySales, monthlyTarget, elapsedTarget, sales, customers, fyAnnual, prevYearAnnual, prevMonthSales, prevYM, lastDay });
   }
 
-  let totals = { sales: 0, target: 0, expected: 0, customers: 0, staff: 0, fyAnnual: 0, prevYearAnnual: 0, prevMonthSales: 0, lastDaySales: 0 };
+  let totals = { sales: 0, target: 0, expected: 0, customers: 0, staff: 0, fyAnnual: 0, prevYearAnnual: 0, prevMonthSales: 0, prevMonthSalesSameStore: 0, salesSameStore: 0, lastDaySales: 0 };
   let cVis = { new: 0, repeat: 0, referral: 0, customers: 0 };
   let cMs = { tech_customers_nominated: 0, tech_customers_free: 0, tech_sales_nominated: 0, tech_sales_free: 0, customers: 0, total_sales: 0, by_dept: {ヘア:{sales:0},アイ:{sales:0},ネイル:{sales:0}} };
   for (const r of storeRows) {
@@ -423,6 +423,11 @@ function computeScope(month) {
     totals.fyAnnual += r.fyAnnual;
     totals.prevYearAnnual += r.prevYearAnnual;
     totals.prevMonthSales += r.prevMonthSales;
+    // Same-store: only count current sales if prev year had data for this store
+    if (r.prevMonthSales > 0) {
+      totals.prevMonthSalesSameStore += r.prevMonthSales;
+      totals.salesSameStore += r.sales;
+    }
     if (r.lastDay) totals.lastDaySales += r.lastDay.sales;
     if (r.ms) {
       const visibleStaffNames = r.ms.staff.filter(n => !DATA.staff_rows.find(s => s.store === r.sid && s.month === month && s.name === n && s.hidden));
@@ -503,12 +508,20 @@ function renderTopKpi() {
       main: fmt(t.customers ? Math.round(t.sales/t.customers) : 0),
       sub: `客1人あたり`
     },
-    {
-      title: "前年同月比",
-      main: prevMonthSales ? `${yoyPct.toFixed(1)}%` : "—",
-      sub: prevMonthSales ? `前年同月 ${fmt(prevMonthSales)} (${SCOPE.globalElapsedDays}/${SCOPE.daysInMonth}日進捗ベース)` : "前年データなし",
-      mainCls: pctClass(yoyPct)
-    },
+    (function() {
+      // Same-store YoY (excludes new stores that didn't exist last year)
+      const ssPrev = t.prevMonthSalesSameStore;
+      const ssSales = t.salesSameStore;
+      const expectedSS = ssPrev ? ssPrev * (SCOPE.globalElapsedDays / SCOPE.daysInMonth) : 0;
+      const ssPct = expectedSS ? (ssSales / expectedSS * 100) : 0;
+      const newStoreCount = SCOPE.storeRows.filter(r => r.prevMonthSales === 0 && r.sales > 0).length;
+      return {
+        title: newStoreCount ? "前年同月比 (同店舗)" : "前年同月比",
+        main: ssPrev ? `${ssPct.toFixed(1)}%` : "—",
+        sub: ssPrev ? `前年同月 ${fmt(ssPrev)}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "前年データなし",
+        mainCls: pctClass(ssPct)
+      };
+    })(),
     {
       title: `前日売上 (${lastDayLabel})`,
       main: fmt(lastDaySales),
@@ -794,10 +807,13 @@ function renderStatusPanel() {
   const projDelta = projection - t.target;
   const remainTarget = Math.max(0, t.target - t.sales);
   const remainDays = Math.max(0, SCOPE.daysInMonth - SCOPE.globalElapsedDays);
-  const prevMonthSales = t.prevMonthSales;
-  const yoyExpected = prevMonthSales ? Math.round(prevMonthSales * (SCOPE.globalElapsedDays / SCOPE.daysInMonth)) : 0;
-  const yoyPct = yoyExpected ? (t.sales / yoyExpected * 100) : 0;
-  const yoyDelta = t.sales - yoyExpected;
+  // Same-store YoY (excludes new stores)
+  const ssPrev = t.prevMonthSalesSameStore;
+  const ssSales = t.salesSameStore;
+  const yoyExpected = ssPrev ? Math.round(ssPrev * (SCOPE.globalElapsedDays / SCOPE.daysInMonth)) : 0;
+  const yoyPct = yoyExpected ? (ssSales / yoyExpected * 100) : 0;
+  const yoyDelta = ssSales - yoyExpected;
+  const newStoreCount = SCOPE.storeRows.filter(r => r.prevMonthSales === 0 && r.sales > 0).length;
 
   // Overall status
   let badge, badgeClsX;
@@ -811,9 +827,9 @@ function renderStatusPanel() {
 
   const rows = [
     {
-      type: prevMonthSales ? (yoyPct >= 100 ? "good" : "bad") : "info",
-      title: prevMonthSales ? `前年同月比 ${yoyPct >= 100 ? "+" : ""}${(yoyPct-100).toFixed(1)}%` : "前年同月データなし",
-      sub: prevMonthSales ? `前年同月 ${fmt(prevMonthSales)} の ${SCOPE.globalElapsedDays}/${SCOPE.daysInMonth}日進捗 ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'+':''}${fmt(yoyDelta)}` : "—",
+      type: ssPrev ? (yoyPct >= 100 ? "good" : "bad") : "info",
+      title: ssPrev ? `${newStoreCount ? '前年同月比 (同店舗)' : '前年同月比'} ${yoyPct >= 100 ? "+" : ""}${(yoyPct-100).toFixed(1)}%` : "前年同月データなし",
+      sub: ssPrev ? `前年同月 ${fmt(ssPrev)} の進捗ベース ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'+':''}${fmt(yoyDelta)}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "—",
     },
     {
       type: pacePct >= 90 ? "good" : pacePct >= 75 ? "warn" : "bad",
