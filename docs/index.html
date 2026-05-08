@@ -169,7 +169,7 @@
       </div>
       <div class="card p-5 lg:col-span-3">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="section-title">月次売上推移 <span class="section-sub">FY26 (5月〜翌4月)</span></h3>
+          <h3 class="section-title">月次売上推移 <span class="section-sub" id="monthlyTrendSubtitle">5月〜翌4月</span></h3>
           <span class="badge badge-info">単位: 千円</span>
         </div>
         <div style="height: 280px;"><canvas id="monthlyTrendChart"></canvas></div>
@@ -258,9 +258,17 @@
 
   <!-- =========== Tab: 年度レポート =========== -->
   <div class="tab-panel" data-panel="annual">
-    <div class="mb-4">
-      <h2 class="text-2xl font-bold">年度レポート</h2>
-      <div class="text-sm text-gray-500 mt-1">FY25 vs FY26 通年比較 (FY = 5月〜翌4月)</div>
+    <div class="mb-4 flex flex-wrap items-baseline gap-3">
+      <div>
+        <h2 class="text-2xl font-bold">年度レポート</h2>
+        <div class="text-sm text-gray-500 mt-1">FY = 5月〜翌4月、HANABIの会計年度</div>
+      </div>
+      <div class="ml-auto flex items-center gap-2 text-sm">
+        <span class="text-xs text-gray-500">対象</span>
+        <select id="annualTargetFY" class="border border-gray-300 rounded px-2 py-1 text-sm"></select>
+        <span class="text-xs text-gray-500 mx-1">vs</span>
+        <select id="annualCompareFY" class="border border-gray-300 rounded px-2 py-1 text-sm"></select>
+      </div>
     </div>
     <!-- Top KPI -->
     <div class="grid md:grid-cols-4 gap-3 mb-5" id="annualHeadlineKpi"></div>
@@ -270,7 +278,7 @@
 
     <!-- Monthly progression chart -->
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">月次売上推移 <span class="section-sub">FY25 vs FY26 重ね</span></h3>
+      <h3 class="section-title mb-3" id="annualMonthlyTitle">月次売上推移</h3>
       <div style="height:280px"><canvas id="annualMonthlyChart"></canvas></div>
     </div>
 
@@ -282,7 +290,7 @@
 
     <!-- Menu top 10 comparison -->
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">メニュー別 TOP 10 比較 <span class="section-sub">FY25 vs FY26 通年</span></h3>
+      <h3 class="section-title mb-3" id="annualMenuTitle">メニュー別 TOP 10 比較</h3>
       <div class="grid md:grid-cols-2 gap-4" id="annualMenuCompare"></div>
     </div>
 
@@ -417,6 +425,36 @@ function activateTab(tabName) {
 document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => activateTab(b.dataset.tab)));
 
 let DATA = null, currentMonth = null, SCOPE = null, _dataLoaded = false;
+
+// === FY helpers (multi-year support) ===
+// fy = 25 means FY25 (2025/05 〜 2026/04). HANABI's fiscal year starts in May.
+function getFYOfMonth(ym) {
+  const y = parseInt(ym.slice(0,4)), m = parseInt(ym.slice(4,6));
+  return m >= 5 ? y - 2000 : y - 2001;
+}
+function getFYMonths(fy) {
+  const startYear = 2000 + fy;
+  return Array.from({length: 12}, (_, i) => {
+    const monthIdx = (i + 4) % 12;  // i=0 → 4(May), i=7 → 11(Dec), i=8 → 0(Jan)
+    const m = monthIdx + 1;
+    const y = i < 8 ? startYear : startYear + 1;
+    return `${y}${String(m).padStart(2,'0')}`;
+  });
+}
+function getAvailableFYs() {
+  const fys = new Set();
+  for (const sid of Object.keys(DATA.stores || {})) {
+    for (const ym of Object.keys(DATA.monthly_by_store[sid] || {})) {
+      fys.add(getFYOfMonth(ym));
+    }
+  }
+  return [...fys].sort();
+}
+function getCurrentFY() {
+  // The latest FY that has any data
+  const fys = getAvailableFYs();
+  return fys.length ? fys[fys.length - 1] : 25;
+}
 Chart.defaults.color = "#6B7280";
 Chart.defaults.borderColor = "#E5E7EB";
 Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", system-ui';
@@ -615,8 +653,27 @@ function renderTopKpi() {
 function renderAnnualReport() {
   if (!document.getElementById("annualHeadlineKpi")) return;
 
-  const fy26Months = ["202605","202606","202607","202608","202609","202610","202611","202612","202701","202702","202703","202704"];
-  const fy25Months = ["202505","202506","202507","202508","202509","202510","202511","202512","202601","202602","202603","202604"];
+  // Populate FY selectors
+  const tgtSel = document.getElementById("annualTargetFY");
+  const cmpSel = document.getElementById("annualCompareFY");
+  const fys = getAvailableFYs();
+  if (!tgtSel.children.length && fys.length) {
+    fys.slice().reverse().forEach(fy => {
+      const o1 = document.createElement("option"); o1.value = fy; o1.textContent = `FY${fy}`;
+      const o2 = document.createElement("option"); o2.value = fy; o2.textContent = `FY${fy}`;
+      tgtSel.appendChild(o1); cmpSel.appendChild(o2);
+    });
+    tgtSel.value = getCurrentFY();
+    cmpSel.value = getCurrentFY() - 1;  // default: prev FY
+    [tgtSel, cmpSel].forEach(s => s.addEventListener("change", () => renderAnnualReport()));
+  }
+  const targetFY = parseInt(tgtSel.value || getCurrentFY());
+  const compareFY = parseInt(cmpSel.value || (getCurrentFY() - 1));
+  const targetMonths = getFYMonths(targetFY);
+  const compareMonths = getFYMonths(compareFY);
+  // For dynamic naming
+  const tgtLabel = `FY${targetFY}`;
+  const cmpLabel = `FY${compareFY}`;
 
   const salesFor = (sid, ym) => {
     const ds = (DATA.daily_by_store[sid] || {})[ym] || [];
@@ -633,148 +690,162 @@ function renderAnnualReport() {
     return ms ? ms.customers : 0;
   };
 
-  // Compute FY totals per store
+  // === Section title updates with FY ===
+  document.getElementById("annualMonthlyTitle").innerHTML = `月次売上推移 <span class="section-sub">${tgtLabel} vs ${cmpLabel} 重ね</span>`;
+  document.getElementById("annualMenuTitle").innerHTML = `メニュー別 TOP 10 比較 <span class="section-sub">${tgtLabel} vs ${cmpLabel} 通年</span>`;
+
+  // === Aggregate ===
   const fy = (months, sid) => months.reduce((a,m) => a + salesFor(sid, m), 0);
   const fyC = (months, sid) => months.reduce((a,m) => a + customersFor(sid, m), 0);
+  const tgtTsu = fy(targetMonths, "tsunashima");
+  const tgtEle = fy(targetMonths, "miyakojima");
+  const cmpTsu = fy(compareMonths, "tsunashima");
+  const cmpEle = fy(compareMonths, "miyakojima");
+  const tgtTotal = tgtTsu + tgtEle;
+  const cmpTotal = cmpTsu + cmpEle;
+  const tgtCustTsu = fyC(targetMonths, "tsunashima");
+  const tgtCustEle = fyC(targetMonths, "miyakojima");
+  const cmpCustTsu = fyC(compareMonths, "tsunashima");
+  const cmpCustEle = fyC(compareMonths, "miyakojima");
 
-  const fy25Tsu = fy(fy25Months, "tsunashima");
-  const fy25Ele = fy(fy25Months, "miyakojima");
-  const fy26Tsu = fy(fy26Months, "tsunashima");
-  const fy26Ele = fy(fy26Months, "miyakojima");
-  const fy25Total = fy25Tsu + fy25Ele;
-  const fy26Total = fy26Tsu + fy26Ele;
-  const fy25CustTsu = fyC(fy25Months, "tsunashima");
-  const fy25CustEle = fyC(fy25Months, "miyakojima");
-  const fy26CustTsu = fyC(fy26Months, "tsunashima");
-  const fy26CustEle = fyC(fy26Months, "miyakojima");
+  // Budget only available for current FY (could extend per-FY budgets later)
+  const isTargetCurrent = targetFY === getCurrentFY();
+  const tgtBudget = isTargetCurrent ? (((DATA.budgets || {}).annual || {}).company || 0) : 0;
+  const tgtTsuBudget = isTargetCurrent ? (((DATA.budgets || {}).annual?.by_store || {}).tsunashima || 0) : 0;
+  const tgtEleBudget = isTargetCurrent ? (((DATA.budgets || {}).annual?.by_store || {}).miyakojima || 0) : 0;
 
-  const fy26Budget = ((DATA.budgets || {}).annual || {}).company || 0;
-  const fy26TsuBudget = ((DATA.budgets || {}).annual?.by_store || {}).tsunashima || 0;
-  const fy26EleBudget = ((DATA.budgets || {}).annual?.by_store || {}).miyakojima || 0;
+  // Determine whether target FY is in progress (has any month with no data yet)
+  const completedTargetMonths = targetMonths.filter(m => salesFor("tsunashima", m) + salesFor("miyakojima", m) > 0);
+  const isTargetInProgress = completedTargetMonths.length < 12;
 
-  // Months elapsed in FY26
-  let monthsElapsed = 0;
-  for (const m of fy26Months) {
-    if (salesFor("tsunashima", m) + salesFor("miyakojima", m) > 0) monthsElapsed++;
-    else break;
+  let monthsEffective = 12;  // assume complete unless target is in progress
+  let projection = tgtTotal, projTsu = tgtTsu, projEle = tgtEle;
+  let elapsedCmpTotal = cmpTotal, yoyTotal = 0;
+  if (isTargetInProgress) {
+    let monthsElapsed = 0;
+    for (const m of targetMonths) {
+      if (salesFor("tsunashima", m) + salesFor("miyakojima", m) > 0) monthsElapsed++;
+      else break;
+    }
+    const dailyFraction = SCOPE.globalElapsedDays / SCOPE.daysInMonth;
+    monthsEffective = Math.max(0, monthsElapsed - 1) + dailyFraction;
+    projection = monthsEffective > 0 ? Math.round(tgtTotal / monthsEffective * 12) : 0;
+    projTsu = monthsEffective > 0 ? Math.round(tgtTsu / monthsEffective * 12) : 0;
+    projEle = monthsEffective > 0 ? Math.round(tgtEle / monthsEffective * 12) : 0;
+    // Compare period: same elapsed slice from compareFY
+    elapsedCmpTotal = compareMonths.slice(0, Math.max(0, monthsElapsed - 1)).reduce((a,m) => a + salesFor("tsunashima", m) + salesFor("miyakojima", m), 0)
+      + (compareMonths[monthsElapsed - 1] ? (salesFor("tsunashima", compareMonths[monthsElapsed - 1]) + salesFor("miyakojima", compareMonths[monthsElapsed - 1])) * dailyFraction : 0);
+    yoyTotal = elapsedCmpTotal ? (tgtTotal / elapsedCmpTotal * 100) : 0;
+  } else {
+    yoyTotal = cmpTotal ? (tgtTotal / cmpTotal * 100) : 0;
   }
-  const dailyFraction = SCOPE.globalElapsedDays / SCOPE.daysInMonth;
-  const monthsEffective = Math.max(0, monthsElapsed - 1) + dailyFraction;
-  const projection = monthsEffective > 0 ? Math.round(fy26Total / monthsEffective * 12) : 0;
-  const projTsu = monthsEffective > 0 ? Math.round(fy26Tsu / monthsEffective * 12) : 0;
-  const projEle = monthsEffective > 0 ? Math.round(fy26Ele / monthsEffective * 12) : 0;
-  // FY26 same-period totals from FY25 (apples-to-apples)
-  const elapsedFy25 = fy25Months.slice(0, monthsElapsed - 1).reduce((a,m) => a + salesFor("tsunashima", m) + salesFor("miyakojima", m), 0)
-    + (fy25Months[monthsElapsed - 1] ? (salesFor("tsunashima", fy25Months[monthsElapsed - 1]) + salesFor("miyakojima", fy25Months[monthsElapsed - 1])) * dailyFraction : 0);
-  const yoyTotal = elapsedFy25 ? (fy26Total / elapsedFy25 * 100) : 0;
 
   // === Headline KPIs ===
   document.getElementById("annualHeadlineKpi").innerHTML = `
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">FY25 通年実績</div>
-      <div class="kpi-num text-2xl font-bold">${fmt(fy25Total)}</div>
-      <div class="text-[11px] text-gray-500 mt-1">綱島 ${fmtM(fy25Tsu)} + 宮古島 ${fmtM(fy25Ele)}</div>
+      <div class="text-xs text-gray-500 mb-1">${cmpLabel} 通年実績</div>
+      <div class="kpi-num text-2xl font-bold">${fmt(cmpTotal)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">綱島 ${fmtM(cmpTsu)} + 宮古島 ${fmtM(cmpEle)}</div>
     </div>
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">FY26 累計実績</div>
-      <div class="kpi-num text-2xl font-bold">${fmt(fy26Total)}</div>
-      <div class="text-[11px] text-gray-500 mt-1">${monthsEffective.toFixed(1)}ヶ月経過</div>
+      <div class="text-xs text-gray-500 mb-1">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}実績</div>
+      <div class="kpi-num text-2xl font-bold">${fmt(tgtTotal)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">${isTargetInProgress ? `${monthsEffective.toFixed(1)}ヶ月経過` : '12ヶ月完了'}</div>
     </div>
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">FY26 通期着地予測</div>
-      <div class="kpi-num text-2xl font-bold ${pctClass(fy26Budget ? projection/fy26Budget*100 : 0)}">${fmt(projection)}</div>
-      <div class="text-[11px] mt-1">vs FY25: <span class="${projection >= fy25Total ? 'pct-good' : 'pct-bad'} font-semibold">${fy25Total ? '▲ +'+fmt(projection - fy25Total) : '—'}</span></div>
+      <div class="text-xs text-gray-500 mb-1">${tgtLabel} ${isTargetInProgress ? '通期着地予測' : '通期実績'}</div>
+      <div class="kpi-num text-2xl font-bold ${pctClass(tgtBudget ? projection/tgtBudget*100 : 100)}">${fmt(projection)}</div>
+      <div class="text-[11px] mt-1">vs ${cmpLabel}: <span class="${projection >= cmpTotal ? 'pct-good' : 'pct-bad'} font-semibold">${cmpTotal ? (projection >= cmpTotal ? '▲ +' : '▼ ') + fmt(Math.abs(projection - cmpTotal)) : '—'}</span></div>
     </div>
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">YTD前年同期比</div>
-      <div class="kpi-num text-2xl font-bold ${pctClass(yoyTotal)}">${elapsedFy25 ? yoyTotal.toFixed(1)+'%' : '—'}</div>
-      <div class="text-[11px] text-gray-500 mt-1">FY25 同期 ${fmt(Math.round(elapsedFy25))}</div>
+      <div class="text-xs text-gray-500 mb-1">${isTargetInProgress ? 'YTD前年同期比' : 'YoY'}</div>
+      <div class="kpi-num text-2xl font-bold ${pctClass(yoyTotal)}">${(isTargetInProgress ? elapsedCmpTotal : cmpTotal) ? yoyTotal.toFixed(1)+'%' : '—'}</div>
+      <div class="text-[11px] text-gray-500 mt-1">${cmpLabel} 同期 ${fmt(Math.round(isTargetInProgress ? elapsedCmpTotal : cmpTotal))}</div>
     </div>`;
 
   // === Per-store annual comparison ===
-  const buildStoreCompare = (label, fy25, fy26, fy26Bud, fy26Proj) => {
-    const yoy = fy25 ? (fy26Proj / fy25 * 100) : 0;
-    const yoyDelta = fy26Proj - fy25;
-    const budgetPct = fy26Bud ? (fy26Proj / fy26Bud * 100) : 0;
+  const buildStoreCompare = (label, cmpV, tgtV, tgtBud, tgtProj) => {
+    const yoy = cmpV ? (tgtProj / cmpV * 100) : 0;
+    const yoyDelta = tgtProj - cmpV;
+    const budgetPct = tgtBud ? (tgtProj / tgtBud * 100) : 0;
     return `
       <div class="card p-5">
         <div class="font-bold mb-3">${label}</div>
         <div class="space-y-3">
           <div class="flex items-baseline justify-between">
-            <span class="text-xs text-gray-500">FY25 通年</span>
-            <span class="kpi-num text-base">${fmt(fy25)}</span>
+            <span class="text-xs text-gray-500">${cmpLabel} 通年</span>
+            <span class="kpi-num text-base">${fmt(cmpV)}</span>
           </div>
           <div class="flex items-baseline justify-between border-t border-gray-100 pt-2">
-            <span class="text-xs text-gray-500">FY26 累計 (進行中)</span>
-            <span class="kpi-num text-base font-semibold">${fmt(fy26)}</span>
+            <span class="text-xs text-gray-500">${tgtLabel} ${isTargetInProgress ? '累計 (進行中)' : '通年'}</span>
+            <span class="kpi-num text-base font-semibold">${fmt(tgtV)}</span>
           </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-xs text-gray-500">FY26 着地予測</span>
-            <span class="kpi-num text-base font-bold">${fmt(fy26Proj)}</span>
-          </div>
-          <div class="flex items-baseline justify-between">
-            <span class="text-xs text-gray-500">FY26 年予算</span>
-            <span class="kpi-num text-sm text-gray-600">${fmt(fy26Bud)}</span>
-          </div>
-          <div class="pt-3 border-t border-gray-100 grid grid-cols-2 gap-3">
+          ${isTargetInProgress ? `<div class="flex items-baseline justify-between">
+            <span class="text-xs text-gray-500">${tgtLabel} 着地予測</span>
+            <span class="kpi-num text-base font-bold">${fmt(tgtProj)}</span>
+          </div>` : ""}
+          ${tgtBud ? `<div class="flex items-baseline justify-between">
+            <span class="text-xs text-gray-500">${tgtLabel} 年予算</span>
+            <span class="kpi-num text-sm text-gray-600">${fmt(tgtBud)}</span>
+          </div>` : ""}
+          <div class="pt-3 border-t border-gray-100 grid grid-cols-${tgtBud ? 2 : 1} gap-3">
             <div>
-              <div class="text-xs text-gray-500">vs FY25</div>
-              <div class="kpi-num font-bold ${pctClass(yoy)}">${fy25 ? yoy.toFixed(1)+'%' : '—'}</div>
+              <div class="text-xs text-gray-500">vs ${cmpLabel}</div>
+              <div class="kpi-num font-bold ${pctClass(yoy)}">${cmpV ? yoy.toFixed(1)+'%' : '—'}</div>
               <div class="text-[11px] ${yoyDelta >= 0 ? 'pct-good' : 'pct-bad'}">${yoyDelta >= 0 ? '▲ +' + fmt(yoyDelta) : '▼ ' + fmt(Math.abs(yoyDelta))}</div>
             </div>
-            <div>
+            ${tgtBud ? `<div>
               <div class="text-xs text-gray-500">vs 予算</div>
-              <div class="kpi-num font-bold ${pctClass(budgetPct)}">${fy26Bud ? budgetPct.toFixed(1)+'%' : '—'}</div>
-              <div class="text-[11px] text-gray-500">${fy26Bud ? (fy26Proj >= fy26Bud ? '達成見込み' : '未達 ' + fmt(Math.abs(fy26Proj - fy26Bud))) : ""}</div>
-            </div>
+              <div class="kpi-num font-bold ${pctClass(budgetPct)}">${budgetPct.toFixed(1)}%</div>
+              <div class="text-[11px] text-gray-500">${tgtProj >= tgtBud ? '達成見込み' : '未達 ' + fmt(Math.abs(tgtProj - tgtBud))}</div>
+            </div>` : ""}
           </div>
         </div>
       </div>`;
   };
   document.getElementById("annualStoreCompare").innerHTML =
-    buildStoreCompare("Hanabi 綱島店", fy25Tsu, fy26Tsu, fy26TsuBudget, projTsu) +
-    buildStoreCompare("ELLE by Hanabi 宮古島店", fy25Ele, fy26Ele, fy26EleBudget, projEle);
+    buildStoreCompare("Hanabi 綱島店", cmpTsu, tgtTsu, tgtTsuBudget, projTsu) +
+    buildStoreCompare("ELLE by Hanabi 宮古島店", cmpEle, tgtEle, tgtEleBudget, projEle);
 
-  // === Monthly chart (FY25 vs FY26 line overlay) ===
-  drawAnnualChart();
+  // === Monthly chart ===
+  drawAnnualChart(targetMonths, compareMonths, tgtLabel, cmpLabel);
 
   // === Department comparison (ELLE 宮古島 only) ===
-  const eleDept = { "ヘア": [0,0], "アイ": [0,0], "ネイル": [0,0] };  // [fy25, fy26]
-  for (const m of fy25Months) {
+  const eleDept = { "ヘア": [0,0], "アイ": [0,0], "ネイル": [0,0] };  // [cmp, tgt]
+  for (const m of compareMonths) {
     const ms = (DATA.monthly_by_store.miyakojima || {})[m];
     if (ms) for (const d of ["ヘア","アイ","ネイル"]) eleDept[d][0] += ms.by_dept[d].sales;
   }
-  for (const m of fy26Months) {
+  for (const m of targetMonths) {
     const ms = (DATA.monthly_by_store.miyakojima || {})[m];
     if (ms) for (const d of ["ヘア","アイ","ネイル"]) eleDept[d][1] += ms.by_dept[d].sales;
   }
-  // Project FY26 dept based on monthsEffective
   for (const d of ["ヘア","アイ","ネイル"]) {
-    if (monthsEffective > 0) eleDept[d][2] = Math.round(eleDept[d][1] / monthsEffective * 12);
-    else eleDept[d][2] = 0;
+    if (isTargetInProgress && monthsEffective > 0) eleDept[d][2] = Math.round(eleDept[d][1] / monthsEffective * 12);
+    else eleDept[d][2] = eleDept[d][1];
   }
   document.getElementById("annualDeptCompare").innerHTML = `
     <table class="w-full text-sm">
       <thead class="text-xs text-gray-500 border-b border-gray-100">
         <tr>
           <th class="text-left py-2 pr-3">部門</th>
-          <th class="text-right py-2 px-3">FY25 通年</th>
-          <th class="text-right py-2 px-3">FY26 累計</th>
-          <th class="text-right py-2 px-3">FY26 着地予測</th>
-          <th class="text-right py-2 pl-3">YoY (予測 vs 実績)</th>
+          <th class="text-right py-2 px-3">${cmpLabel} 通年</th>
+          <th class="text-right py-2 px-3">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}</th>
+          ${isTargetInProgress ? `<th class="text-right py-2 px-3">${tgtLabel} 着地予測</th>` : ""}
+          <th class="text-right py-2 pl-3">YoY</th>
         </tr>
       </thead>
       <tbody>
         ${["ヘア","アイ","ネイル"].map(d => {
-          const [fy25v, fy26v, fy26proj] = eleDept[d];
-          const yoy = fy25v ? (fy26proj / fy25v * 100) : 0;
+          const [cmpV, tgtV, tgtProj] = eleDept[d];
+          const yoy = cmpV ? (tgtProj / cmpV * 100) : 0;
           const color = d==="ヘア" ? "var(--dept-hair)" : d==="アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
           return `<tr class="border-b border-gray-50">
-            <td class="py-3 pr-3"><span class="badge" style="background:${color}22; color:${color}; border:1px solid ${color}50">${d}</span></td>
-            <td class="text-right py-3 px-3 kpi-num">${fmt(fy25v)}</td>
-            <td class="text-right py-3 px-3 kpi-num font-semibold">${fmt(fy26v)}</td>
-            <td class="text-right py-3 px-3 kpi-num font-bold">${fmt(fy26proj)}</td>
-            <td class="text-right py-3 pl-3 kpi-num font-semibold ${pctClass(yoy)}">${fy25v ? yoy.toFixed(1)+'%' : '—'}</td>
+            <td class="py-3 pr-3"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wider" style="background:${color}; color:#fff; min-width:48px; justify-content:center;">${d}</span></td>
+            <td class="text-right py-3 px-3 kpi-num">${fmt(cmpV)}</td>
+            <td class="text-right py-3 px-3 kpi-num font-semibold">${fmt(tgtV)}</td>
+            ${isTargetInProgress ? `<td class="text-right py-3 px-3 kpi-num font-bold">${fmt(tgtProj)}</td>` : ""}
+            <td class="text-right py-3 pl-3 kpi-num font-semibold ${pctClass(yoy)}">${cmpV ? yoy.toFixed(1)+'%' : '—'}</td>
           </tr>`;
         }).join("")}
       </tbody>
@@ -782,15 +853,16 @@ function renderAnnualReport() {
 
   // === Menu top 10 comparison ===
   const menuData = DATA.menu_data || {};
-  const fy25MenuRows = (menuData.FY25_annual || {});
-  const fy26MenuFromMonths = (sid) => {
-    const sets = fy26Months.map(m => (menuData[m] || {})[sid] || []).filter(s => s.length);
+  const cmpMenuKey = `FY${compareFY}_annual`;
+  const cmpMenuRows = (menuData[cmpMenuKey] || {});
+  const tgtMenuFromMonths = (sid) => {
+    const sets = targetMonths.map(m => (menuData[m] || {})[sid] || []).filter(s => s.length);
     return aggregateMenuRows(sets);
   };
-  const fy25Combined = aggregateMenuRows([(fy25MenuRows.tsunashima || []), (fy25MenuRows.miyakojima || [])]);
-  const fy26Combined = aggregateMenuRows([fy26MenuFromMonths("tsunashima"), fy26MenuFromMonths("miyakojima")]);
-  const fy25Top = [...fy25Combined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
-  const fy26Top = [...fy26Combined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
+  const cmpCombined = aggregateMenuRows([(cmpMenuRows.tsunashima || []), (cmpMenuRows.miyakojima || [])]);
+  const tgtCombined = aggregateMenuRows([tgtMenuFromMonths("tsunashima"), tgtMenuFromMonths("miyakojima")]);
+  const cmpTop = [...cmpCombined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
+  const tgtTop = [...tgtCombined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
   const buildMenuTop = (title, top) => `
     <div>
       <div class="text-xs font-semibold text-gray-500 mb-2">${title}</div>
@@ -807,52 +879,50 @@ function renderAnnualReport() {
         </tbody>
       </table>
     </div>`;
-  document.getElementById("annualMenuCompare").innerHTML = buildMenuTop("FY25 通年 TOP 10", fy25Top) + buildMenuTop("FY26 累計 TOP 10", fy26Top);
+  document.getElementById("annualMenuCompare").innerHTML = buildMenuTop(`${cmpLabel} 通年 TOP 10`, cmpTop) + buildMenuTop(`${tgtLabel} ${isTargetInProgress ? '累計' : '通年'} TOP 10`, tgtTop);
 
   // === Visit metrics ===
   const visitFor = (months, sid, key) => months.reduce((a,m) => {
     const v = ((DATA.visitors_by_store || {})[sid] || {})[m];
     return a + (v ? (v[key] || 0) : 0);
   }, 0);
-  const fy25Cust = fy25CustTsu + fy25CustEle;
-  const fy26Cust = fy26CustTsu + fy26CustEle;
-  const fy25Repeat = visitFor(fy25Months, "tsunashima", "repeat") + visitFor(fy25Months, "miyakojima", "repeat");
-  const fy26Repeat = visitFor(fy26Months, "tsunashima", "repeat") + visitFor(fy26Months, "miyakojima", "repeat");
-  const fy25RepRate = fy25Cust ? (fy25Repeat / fy25Cust * 100) : 0;
-  const fy26RepRate = fy26Cust ? (fy26Repeat / fy26Cust * 100) : 0;
-  const fy25Avg = fy25Cust ? Math.round(fy25Total / fy25Cust) : 0;
-  const fy26Avg = fy26Cust ? Math.round(fy26Total / fy26Cust) : 0;
+  const cmpCust = cmpCustTsu + cmpCustEle;
+  const tgtCust = tgtCustTsu + tgtCustEle;
+  const cmpRepeat = visitFor(compareMonths, "tsunashima", "repeat") + visitFor(compareMonths, "miyakojima", "repeat");
+  const tgtRepeat = visitFor(targetMonths, "tsunashima", "repeat") + visitFor(targetMonths, "miyakojima", "repeat");
+  const cmpRepRate = cmpCust ? (cmpRepeat / cmpCust * 100) : 0;
+  const tgtRepRate = tgtCust ? (tgtRepeat / tgtCust * 100) : 0;
+  const cmpAvg = cmpCust ? Math.round(cmpTotal / cmpCust) : 0;
+  const tgtAvg = tgtCust ? Math.round(tgtTotal / tgtCust) : 0;
   document.getElementById("annualVisitCompare").innerHTML = `
     <table class="w-full text-sm">
       <thead class="text-xs text-gray-500 border-b border-gray-100">
         <tr>
           <th class="text-left py-2 pr-3">指標</th>
-          <th class="text-right py-2 px-3">FY25 通年</th>
-          <th class="text-right py-2 px-3">FY26 累計</th>
+          <th class="text-right py-2 px-3">${cmpLabel} 通年</th>
+          <th class="text-right py-2 px-3">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}</th>
           <th class="text-right py-2 pl-3">変化</th>
         </tr>
       </thead>
       <tbody>
         ${[
-          { label: "総客数", fy25: fmtN(fy25Cust), fy26: fmtN(fy26Cust), delta: fy26Cust - fy25Cust * monthsEffective / 12, fmt: fmtN },
-          { label: "平均客単価", fy25: fmt(fy25Avg), fy26: fmt(fy26Avg), delta: fy26Avg - fy25Avg, fmt: fmt },
-          { label: "リピート率", fy25: fy25RepRate.toFixed(1) + "%", fy26: fy26RepRate.toFixed(1) + "%", delta: fy26RepRate - fy25RepRate, fmt: v => v.toFixed(1) + "pt" },
+          { label: "総客数", cmpStr: fmtN(cmpCust), tgtStr: fmtN(tgtCust), delta: tgtCust - cmpCust * (isTargetInProgress ? monthsEffective / 12 : 1), fmt: fmtN },
+          { label: "平均客単価", cmpStr: fmt(cmpAvg), tgtStr: fmt(tgtAvg), delta: tgtAvg - cmpAvg, fmt: fmt },
+          { label: "リピート率", cmpStr: cmpRepRate.toFixed(1) + "%", tgtStr: tgtRepRate.toFixed(1) + "%", delta: tgtRepRate - cmpRepRate, fmt: v => v.toFixed(1) + "pt" },
         ].map(row => `<tr class="border-b border-gray-50">
           <td class="py-3 pr-3 font-semibold">${row.label}</td>
-          <td class="text-right py-3 px-3 kpi-num">${row.fy25}</td>
-          <td class="text-right py-3 px-3 kpi-num font-semibold">${row.fy26}</td>
+          <td class="text-right py-3 px-3 kpi-num">${row.cmpStr}</td>
+          <td class="text-right py-3 px-3 kpi-num font-semibold">${row.tgtStr}</td>
           <td class="text-right py-3 pl-3 kpi-num ${row.delta >= 0 ? 'pct-good' : 'pct-bad'} font-semibold">${row.delta >= 0 ? '▲ +' : '▼ '}${row.fmt(Math.abs(row.delta))}</td>
         </tr>`).join("")}
       </tbody>
     </table>`;
 }
 
-function drawAnnualChart() {
+function drawAnnualChart(targetMonths, compareMonths, tgtLabel, cmpLabel) {
   const el = document.getElementById("annualMonthlyChart");
   if (!el) return;
   if (window._chartAnnual) window._chartAnnual.destroy();
-  const fy26Months = ["202605","202606","202607","202608","202609","202610","202611","202612","202701","202702","202703","202704"];
-  const fy25Months = ["202505","202506","202507","202508","202509","202510","202511","202512","202601","202602","202603","202604"];
   const labels = ["5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月"];
   const salesFor = (sid, ym) => {
     const ds = (DATA.daily_by_store[sid] || {})[ym] || [];
@@ -867,15 +937,15 @@ function drawAnnualChart() {
     if (t === null && e === null) return null;
     return (t || 0) + (e || 0);
   };
-  const fy25Data = fy25Months.map(sumStores);
-  const fy26Data = fy26Months.map(sumStores);
+  const cmpData = compareMonths.map(sumStores);
+  const tgtData = targetMonths.map(sumStores);
   window._chartAnnual = new Chart(el.getContext("2d"), {
     type: "line",
     data: {
       labels,
       datasets: [
-        { label: "FY25 全社", data: fy25Data, borderColor: "#94A3B8", backgroundColor: "rgba(148,163,184,0.1)", tension: 0.3, fill: true, pointRadius: 4 },
-        { label: "FY26 全社 (進行中)", data: fy26Data, borderColor: "#1A1A1A", backgroundColor: "rgba(0,0,0,0.05)", tension: 0.3, fill: false, pointRadius: 5, borderWidth: 3 },
+        { label: `${cmpLabel} 全社`, data: cmpData, borderColor: "#94A3B8", backgroundColor: "rgba(148,163,184,0.1)", tension: 0.3, fill: true, pointRadius: 4 },
+        { label: `${tgtLabel} 全社`, data: tgtData, borderColor: "#1A1A1A", backgroundColor: "rgba(0,0,0,0.05)", tension: 0.3, fill: false, pointRadius: 5, borderWidth: 3 },
       ]
     },
     options: {
@@ -2139,16 +2209,19 @@ function drawMonthlyTrend() {
   if (!el) return;
   if (window._chartMT) window._chartMT.destroy();
 
-  // FY26 = 2026/05 〜 2027/04 / FY25 = 2025/05 〜 2026/04
-  const fy26Months = ["202605","202606","202607","202608","202609","202610","202611","202612","202701","202702","202703","202704"];
-  const fy25Months = ["202505","202506","202507","202508","202509","202510","202511","202512","202601","202602","202603","202604"];
+  // Multi-FY agnostic: current FY vs previous FY
+  const curFY = getCurrentFY();
+  const prevFY = curFY - 1;
+  const targetMonths = getFYMonths(curFY);
+  const compareMonths = getFYMonths(prevFY);
+  const cmpLabel = `FY${prevFY}`;
+  const tgtLabel = `FY${curFY}`;
   const monthLabels = ["5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月"];
 
   const monthlyBudgets = (DATA.budgets || {}).monthly || {};
   const tsuMonths = monthlyBudgets.tsunashima || {};
   const eleMonths = monthlyBudgets.miyakojima || {};
 
-  // Sales lookup helper
   const salesFor = (sid, ym) => {
     const ds = (DATA.daily_by_store[sid] || {})[ym] || [];
     const sum = ds.reduce((a,d) => a + d.sales, 0);
@@ -2157,11 +2230,11 @@ function drawMonthlyTrend() {
     return ms ? ms.total_sales : null;
   };
 
-  const fy26Tsu = fy26Months.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
-  const fy26Ele = fy26Months.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
-  const fy25Tsu = fy25Months.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
-  const fy25Ele = fy25Months.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
-  const fy26Target = fy26Months.map(m => ((tsuMonths[m] || 0) + (eleMonths[m] || 0)) / 1000);
+  const tgtTsu = targetMonths.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
+  const tgtEle = targetMonths.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
+  const cmpTsu = compareMonths.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
+  const cmpEle = compareMonths.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
+  const tgtTarget = targetMonths.map(m => ((tsuMonths[m] || 0) + (eleMonths[m] || 0)) / 1000);
 
   window._chartMT = new Chart(el.getContext("2d"), {
     type: "bar",
@@ -2169,13 +2242,13 @@ function drawMonthlyTrend() {
       labels: monthLabels,
       datasets: [
         // FY25 (lighter, prior year)
-        { label: "FY25 綱島", data: fy25Tsu, backgroundColor: "rgba(30,136,229,0.35)", stack: "fy25", borderRadius: 2 },
-        { label: "FY25 宮古島", data: fy25Ele, backgroundColor: "rgba(214,51,132,0.35)", stack: "fy25", borderRadius: 2 },
-        // FY26 (saturated, current)
-        { label: "FY26 綱島", data: fy26Tsu, backgroundColor: "#1E88E5", stack: "fy26", borderRadius: 2 },
-        { label: "FY26 宮古島", data: fy26Ele, backgroundColor: "#D63384", stack: "fy26", borderRadius: 2 },
-        // FY26 budget overlay
-        { label: "FY26 予算", data: fy26Target, type: "line", borderColor: "#1A1A1A", borderWidth: 2, borderDash: [4,4], backgroundColor: "transparent", pointRadius: 3, pointBackgroundColor: "#1A1A1A", tension: 0.2, stack: "_line" },
+        { label: `${cmpLabel} 綱島`, data: cmpTsu, backgroundColor: "rgba(30,136,229,0.35)", stack: "cmp", borderRadius: 2 },
+        { label: `${cmpLabel} 宮古島`, data: cmpEle, backgroundColor: "rgba(214,51,132,0.35)", stack: "cmp", borderRadius: 2 },
+        // Target FY (saturated, current)
+        { label: `${tgtLabel} 綱島`, data: tgtTsu, backgroundColor: "#1E88E5", stack: "tgt", borderRadius: 2 },
+        { label: `${tgtLabel} 宮古島`, data: tgtEle, backgroundColor: "#D63384", stack: "tgt", borderRadius: 2 },
+        // Target FY budget overlay
+        { label: `${tgtLabel} 予算`, data: tgtTarget, type: "line", borderColor: "#1A1A1A", borderWidth: 2, borderDash: [4,4], backgroundColor: "transparent", pointRadius: 3, pointBackgroundColor: "#1A1A1A", tension: 0.2, stack: "_line" },
       ]
     },
     options: {
