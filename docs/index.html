@@ -215,6 +215,7 @@
     </div>
     <div class="grid md:grid-cols-3 gap-3 mb-5" id="visitorBreakdownCards"></div>
     <div class="grid md:grid-cols-3 gap-3 mb-5" id="nominationCards"></div>
+    <div class="grid md:grid-cols-3 gap-3 mb-5" id="genderCards"></div>
 
     <!-- 月次推移チャート -->
     <div class="grid lg:grid-cols-2 gap-3 mb-3">
@@ -595,7 +596,7 @@ function computeScope(month) {
 
   let totals = { sales: 0, target: 0, expected: 0, customers: 0, staff: 0, fyAnnual: 0, prevYearAnnual: 0, prevMonthSales: 0, prevMonthSalesSameStore: 0, salesSameStore: 0, lastDaySales: 0 };
   let cVis = { new: 0, repeat: 0, referral: 0, customers: 0 };
-  let cMs = { tech_customers_nominated: 0, tech_customers_free: 0, tech_sales_nominated: 0, tech_sales_free: 0, customers: 0, total_sales: 0, by_dept: {ヘア:{sales:0},アイ:{sales:0},ネイル:{sales:0}} };
+  let cMs = { tech_customers_nominated: 0, tech_customers_free: 0, tech_sales_nominated: 0, tech_sales_free: 0, tech_customers_male: 0, tech_customers_female: 0, tech_sales_male: 0, tech_sales_female: 0, customers: 0, total_sales: 0, by_dept: {ヘア:{sales:0},アイ:{sales:0},ネイル:{sales:0}} };
   for (const r of storeRows) {
     totals.sales += r.sales;
     totals.target += r.monthlyTarget;
@@ -620,6 +621,10 @@ function computeScope(month) {
       cMs.tech_customers_free += r.ms.tech_customers_free || 0;
       cMs.tech_sales_nominated += r.ms.tech_sales_nominated || 0;
       cMs.tech_sales_free += r.ms.tech_sales_free || 0;
+      cMs.tech_customers_male += r.ms.tech_customers_male || 0;
+      cMs.tech_customers_female += r.ms.tech_customers_female || 0;
+      cMs.tech_sales_male += r.ms.tech_sales_male || 0;
+      cMs.tech_sales_female += r.ms.tech_sales_female || 0;
       cMs.customers += r.ms.customers || 0;
       cMs.total_sales += r.ms.total_sales || 0;
       for (const d of ["ヘア","アイ","ネイル"]) cMs.by_dept[d].sales += r.ms.by_dept[d].sales;
@@ -2359,6 +2364,56 @@ function renderVisitsTab() {
     n2 += buildNomCard(r.store.name, r.ms, r.sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient");
   }
   root2.innerHTML = n2;
+
+  // Gender breakdown
+  const root3 = document.getElementById("genderCards");
+  if (root3) {
+    const buildGenderCard = (title, ms, headerCls) => {
+      if (!ms) {
+        return `<div class="card overflow-hidden">
+          ${headerCls ? `<div class="${headerCls} text-white px-4 py-3 font-bold">${title}</div>` : `<div class="px-4 py-3 border-b border-gray-700 font-bold">${title}</div>`}
+          <div class="p-6 text-center text-sm text-gray-500">データなし</div>
+        </div>`;
+      }
+      const male = ms.tech_customers_male || 0;
+      const female = ms.tech_customers_female || 0;
+      const total = male + female;
+      const maleSales = ms.tech_sales_male || 0;
+      const femaleSales = ms.tech_sales_female || 0;
+      const maleAvg = male ? Math.round(maleSales / male) : 0;
+      const femaleAvg = female ? Math.round(femaleSales / female) : 0;
+      const malePct = total ? (male / total * 100).toFixed(1) : "—";
+      const femalePct = total ? (female / total * 100).toFixed(1) : "—";
+      return `<div class="card overflow-hidden">
+        ${headerCls ? `<div class="${headerCls} text-white px-4 py-3 font-bold">${title}</div>` : `<div class="px-4 py-3 border-b border-gray-700 font-bold">${title}</div>`}
+        <div class="p-4">
+          <div class="text-xs text-gray-500 mb-2">男女別 (技術ベース)</div>
+          ${[
+            { label: "男性", val: male, sales: maleSales, avg: maleAvg, pct: malePct, color: "#3B82F6" },
+            { label: "女性", val: female, sales: femaleSales, avg: femaleAvg, pct: femalePct, color: "#EC4899" },
+          ].map(it => `
+            <div class="mb-2">
+              <div class="flex items-center text-sm">
+                <div class="w-12 text-xs" style="color:${it.color}; font-weight:600">${it.label}</div>
+                <div class="flex-1 progress-track mx-2"><div class="progress-fill" style="width:${total ? (it.val/total*100) : 0}%; background:${it.color}"></div></div>
+                <div class="kpi-num w-10 text-right text-sm font-semibold">${fmtN(it.val)}</div>
+                <div class="kpi-num w-12 text-right text-xs text-gray-400">${it.pct}%</div>
+              </div>
+              <div class="text-[11px] text-gray-500 mt-0.5 ml-14">
+                ${fmt(it.sales)} · 客単価 ${fmt(it.avg)}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+    };
+    let g3 = "";
+    g3 += buildGenderCard("全社", SCOPE.cMs, "");
+    for (const r of SCOPE.storeRows) {
+      g3 += buildGenderCard(r.store.name, r.ms, r.sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient");
+    }
+    root3.innerHTML = g3;
+  }
 }
 
 // ========== Tab 4: Staff ==========

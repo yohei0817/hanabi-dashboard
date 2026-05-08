@@ -161,6 +161,10 @@ def load_staff_ranking(path: Path, store_id: str, year_month: str) -> list[dict]
             "tech_customers_nominated": parse_int(row[11]),
             "tech_sales_free": parse_int(row[13]),
             "tech_customers_free": parse_int(row[14]),
+            "tech_sales_male": parse_int(row[16]),
+            "tech_customers_male": parse_int(row[17]),
+            "tech_sales_female": parse_int(row[19]),
+            "tech_customers_female": parse_int(row[20]),
             "shop_sales": parse_int(row[22]),
             "shop_customers": parse_int(row[23]),
             "shop_pct": parse_pct(row[24]),
@@ -194,6 +198,10 @@ def aggregate_monthly_by_store(staff_rows: list[dict]) -> dict:
         "tech_sales": 0,
         "tech_sales_nominated": 0,
         "tech_sales_free": 0,
+        "tech_sales_male": 0,
+        "tech_sales_female": 0,
+        "tech_customers_male": 0,
+        "tech_customers_female": 0,
         "shop_sales": 0,
         "customers": 0,
         "tech_customers": 0,
@@ -215,6 +223,10 @@ def aggregate_monthly_by_store(staff_rows: list[dict]) -> dict:
         bucket["tech_customers"] += s.get("tech_customers", 0)
         bucket["tech_customers_nominated"] += s.get("tech_customers_nominated", 0)
         bucket["tech_customers_free"] += s.get("tech_customers_free", 0)
+        bucket["tech_sales_male"] += s.get("tech_sales_male", 0)
+        bucket["tech_sales_female"] += s.get("tech_sales_female", 0)
+        bucket["tech_customers_male"] += s.get("tech_customers_male", 0)
+        bucket["tech_customers_female"] += s.get("tech_customers_female", 0)
         bucket["staff_count"] += 1
         bucket["staff"].append(s["name"])
         # by department: assign to primary dept
