@@ -249,15 +249,9 @@
       </select>
       <span class="ml-auto text-[11px] text-gray-400" id="menuStatus"></span>
     </div>
-    <div class="grid lg:grid-cols-3 gap-3 mb-4">
-      <div class="card p-4">
-        <div class="text-xs font-semibold text-gray-500 mb-2">カテゴリ別 売上構成</div>
-        <div id="menuCategoryBreakdown" class="space-y-2"></div>
-      </div>
-      <div class="card p-4 lg:col-span-2 overflow-x-auto">
-        <div class="text-xs font-semibold text-gray-500 mb-2">商品別 ランキング (上位30)</div>
-        <div id="menuRankingTable"></div>
-      </div>
+    <div class="card p-4 mb-4 overflow-x-auto">
+      <div class="text-xs font-semibold text-gray-500 mb-2">商品別 ランキング (上位30)</div>
+      <div id="menuRankingTable"></div>
     </div>
   </div>
 
@@ -278,7 +272,7 @@
 </main>
 
 <script>
-const fmt = n => "¥" + (n||0).toLocaleString();
+const fmt = n => "¥" + Math.round(n||0).toLocaleString();
 const fmtN = n => (n||0).toLocaleString();
 const fmtK = n => "¥" + Math.round((n||0)/1000).toLocaleString() + "K";
 const fmtM = n => "¥" + ((n||0)/1000000).toFixed(1) + "M";
@@ -523,9 +517,9 @@ function renderTopKpi() {
       };
     })(),
     {
-      title: `前日売上 (${lastDayLabel})`,
+      title: `直近の日次 (${lastDayLabel})`,
       main: fmt(lastDaySales),
-      sub: lastDaySales ? `直近の日次売上 (両店合計)` : "—"
+      sub: lastDaySales ? "両店合算" : "—"
     },
   ];
 
@@ -616,7 +610,8 @@ function drawMenu() {
   }
   const sortedCats = Object.entries(catTotals).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const catColors = ["#1E88E5","#E91E63","#F59E0B","#43A047","#8E24AA","#FF6B35","#29B6F6","#9CA3AF"];
-  document.getElementById("menuCategoryBreakdown").innerHTML = sortedCats.map(([cat, v], i) => {
+  const catEl = document.getElementById("menuCategoryBreakdown");
+  if (catEl) catEl.innerHTML = sortedCats.map(([cat, v], i) => {
     const w = grand ? (v/grand*100).toFixed(1) : 0;
     const c = catColors[i % catColors.length];
     return `<div>
@@ -692,9 +687,8 @@ function renderRealtimeBanner() {
         <div class="flex items-center gap-3">
           <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#10B981"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background:#10B981"></span></span>
           <span class="text-sm font-bold">本日リアルタイム</span>
-          <span class="text-xs text-gray-500">${storeName} のみ${s.snapshot_time ? ` · ${s.snapshot_time}時点` : ""}</span>
+          <span class="text-xs text-gray-500">${storeName} ${s.snapshot_time ? `· ${s.snapshot_time}時点` : ""}</span>
         </div>
-        <span class="text-[11px] text-gray-400">※ 全社版は今後対応予定</span>
       </div>
       <div class="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
@@ -829,7 +823,7 @@ function renderStatusPanel() {
     {
       type: ssPrev ? (yoyPct >= 100 ? "good" : "bad") : "info",
       title: ssPrev ? `${newStoreCount ? '前年同月比 (同店舗)' : '前年同月比'} ${yoyPct >= 100 ? "+" : ""}${(yoyPct-100).toFixed(1)}%` : "前年同月データなし",
-      sub: ssPrev ? `前年同月 ${fmt(ssPrev)} の進捗ベース ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'+':''}${fmt(yoyDelta)}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "—",
+      sub: ssPrev ? `前年同月 ${fmt(ssPrev)} の進捗値 ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'+':''}${fmt(yoyDelta)}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "—",
     },
     {
       type: pacePct >= 90 ? "good" : pacePct >= 75 ? "warn" : "bad",
