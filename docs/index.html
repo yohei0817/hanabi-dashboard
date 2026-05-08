@@ -302,8 +302,7 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   document.getElementById("loginId").focus();
 });
 
-const savedSession = isSessionValid();
-if (savedSession) setAuthenticated(savedSession.role);
+// (Auth resume moved to bottom of script — after all declarations to avoid TDZ on _dataLoaded)
 
 // === Tabs ===
 function activateTab(tabName) {
@@ -1141,6 +1140,12 @@ renderCharts = function(month) {
   _origRenderCharts(month);
   drawVisitDonut();
 };
+
+// === Resume saved session (must run last, after all declarations) ===
+{
+  const savedSession = isSessionValid();
+  if (savedSession) setAuthenticated(savedSession.role);
+}
 </script>
 </body>
 </html>
