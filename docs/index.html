@@ -86,6 +86,37 @@
   table tr.border-row:last-child { border-bottom: none; }
 
   .input-dark { background: #fff; border: 1px solid #374151; color: #fff; }
+
+  /* Print: A4 portrait, summary tab only, compressed */
+  @media print {
+    @page { size: A4 portrait; margin: 10mm 8mm; }
+    html, body { background: #fff !important; font-size: 9pt; }
+    .login-overlay, .tab-bar, .brand-strip, footer, #realtimeTodayBanner,
+    #recruitModal, .no-print { display: none !important; }
+    /* Force only summary panel to show, regardless of active state */
+    .tab-panel { display: none !important; }
+    .tab-panel[data-panel="summary"] { display: block !important; animation: none !important; }
+    main { padding: 0 !important; max-width: 100% !important; }
+    .card { box-shadow: none !important; border: 1px solid #ccc !important; border-radius: 6px !important; page-break-inside: avoid; }
+    .card.p-5, .card.p-4 { padding: 0.4rem !important; }
+    .grid { gap: 0.4rem !important; }
+    h2 { font-size: 14pt !important; margin-bottom: 0.3rem !important; }
+    .section-title { font-size: 9pt !important; }
+    .kpi-num { font-size: inherit !important; }
+    .text-2xl { font-size: 14pt !important; }
+    .text-xl { font-size: 11pt !important; }
+    /* Compress chart heights */
+    canvas { max-height: 120px !important; }
+    [style*="height:280px"], [style*="height:260px"], [style*="height:240px"] { height: 120px !important; }
+    .mb-5 { margin-bottom: 0.5rem !important; }
+    .mb-4 { margin-bottom: 0.4rem !important; }
+    .mb-3 { margin-bottom: 0.3rem !important; }
+    /* Hide month selector during print but keep month label */
+    select { border: none !important; appearance: none; -webkit-appearance: none; padding: 0 !important; background: transparent !important; }
+    /* Print URL/timestamp footer via @page mechanism */
+    .print-footer { display: block !important; font-size: 7pt; color: #888; text-align: center; margin-top: 6mm; }
+  }
+  .print-footer { display: none; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -123,6 +154,7 @@
     <div class="flex items-center gap-3">
       <span class="text-[11px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
       <select id="monthSelect" class="bg-gray-900 border border-gray-700 rounded px-2.5 py-1 text-sm"></select>
+      <button id="printBtn" class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1" title="サマリーを印刷 (A4 1枚)">印刷</button>
       <span id="roleBadge" class="text-xs px-2 py-0.5 rounded border border-gray-600 text-gray-300">…</span>
       <button id="logoutBtn" class="text-xs text-gray-400 hover:text-white">切替</button>
     </div>
@@ -188,6 +220,7 @@
       <div class="grid grid-cols-3 gap-3" id="visitDonutRow"></div>
     </div>
     <div id="deptBreakdownSummary" class="hidden"></div>
+    <div class="print-footer">HANABI Dashboard · <span id="printGeneratedAt"></span> · 数値はすべて税抜</div>
   </div>
 
   <!-- =========== Tab 2: 売上 & 部門 =========== -->
@@ -493,6 +526,13 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   document.getElementById("loginId").focus();
 });
 
+// Print: switch to サマリー first to ensure charts are rendered
+document.getElementById("printBtn").addEventListener("click", () => {
+  if (typeof activateTab === "function") activateTab("summary");
+  // Wait one frame so canvases have rendered, then print
+  setTimeout(() => window.print(), 350);
+});
+
 // (Auth resume moved to bottom of script — after all declarations to avoid TDZ on _dataLoaded)
 
 // === Tabs ===
@@ -547,6 +587,8 @@ async function loadData() {
   DATA = d;
   mergeLocalRecruitOverrides();
   document.getElementById("generatedAt").textContent = "generated " + d.generated_at;
+  const pgen = document.getElementById("printGeneratedAt");
+  if (pgen) pgen.textContent = d.generated_at;
   const ms = document.getElementById("monthSelect");
   d.months.forEach(m => {
     const o = document.createElement("option");
