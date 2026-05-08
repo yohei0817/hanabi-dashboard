@@ -538,6 +538,70 @@ function renderStoreCompare() {
     const projDelta = projection - r.monthlyTarget;
     const w = r.monthlyTarget ? Math.min(100, (r.sales/r.monthlyTarget)*100) : 0;
     const paceW = r.monthlyTarget ? Math.min(100, (r.elapsedTarget/r.monthlyTarget)*100) : 0;
+    // 綱島-only: 技術/店販 + 指名/フリー + Top3 staff
+    let tsuExtraHtml = "";
+    if (r.sid === "tsunashima" && r.ms) {
+      const ms = r.ms;
+      const techRate = ms.total_sales ? (ms.tech_sales/ms.total_sales*100).toFixed(1) : 0;
+      const shopRate = ms.total_sales ? (ms.shop_sales/ms.total_sales*100).toFixed(1) : 0;
+      const totalTech = (ms.tech_customers_nominated||0) + (ms.tech_customers_free||0);
+      const nomRate = totalTech ? (ms.tech_customers_nominated/totalTech*100).toFixed(1) : 0;
+      // Top 3 staff
+      const topStaff = (DATA.staff_rows || [])
+        .filter(s => s.store === r.sid && s.month === currentMonth && !s.hidden)
+        .sort((a,b) => b.total_sales - a.total_sales)
+        .slice(0, 3);
+      tsuExtraHtml = `<div class="mt-4 pt-4 border-t border-gray-100">
+        <!-- 技術 vs 店販 -->
+        <div class="mb-4">
+          <div class="flex items-baseline justify-between mb-1.5">
+            <div class="text-xs font-semibold text-gray-500">売上内訳</div>
+            <div class="text-[10px] text-gray-400">店販比率 ${shopRate}%</div>
+          </div>
+          <div class="flex h-5 rounded overflow-hidden">
+            <div style="width:${techRate}%; background:#1E88E5" class="flex items-center justify-center text-[10px] text-white font-semibold">技術 ${techRate}%</div>
+            <div style="width:${shopRate}%; background:#43A047" class="flex items-center justify-center text-[10px] text-white font-semibold">${shopRate >= 8 ? '店販' : ''}</div>
+          </div>
+          <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+            <span>技術 ${fmt(ms.tech_sales)}</span>
+            <span>店販 ${fmt(ms.shop_sales)}</span>
+          </div>
+        </div>
+        <!-- 指名 vs フリー -->
+        <div class="mb-4">
+          <div class="flex items-baseline justify-between mb-1.5">
+            <div class="text-xs font-semibold text-gray-500">指名 / フリー</div>
+            <div class="text-sm font-bold" style="color:#8E24AA">指名率 ${nomRate}%</div>
+          </div>
+          <div class="flex items-center text-xs gap-3">
+            <div class="flex-1">
+              <div class="text-gray-500">指名</div>
+              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_nominated)}<span class="text-gray-400 text-[10px]">客</span> · ${fmt(ms.tech_sales_nominated)}</div>
+            </div>
+            <div class="flex-1">
+              <div class="text-gray-500">フリー</div>
+              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_free)}<span class="text-gray-400 text-[10px]">客</span> · ${fmt(ms.tech_sales_free)}</div>
+            </div>
+          </div>
+        </div>
+        <!-- Top 3 -->
+        ${topStaff.length ? `<div>
+          <div class="text-xs font-semibold text-gray-500 mb-2">スタッフTOP 3</div>
+          <div class="space-y-1.5">
+            ${topStaff.map((s, i) => {
+              const medal = i === 0 ? "rank-1" : i === 1 ? "rank-2" : "rank-3";
+              return `<div class="flex items-center gap-2 text-sm">
+                <span class="rank-num ${medal} w-4 text-center">${i+1}</span>
+                ${staffAvatar(s, 22)}
+                <span class="flex-1 truncate">${s.name}</span>
+                <span class="kpi-num font-semibold">${fmt(s.total_sales)}</span>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>` : ""}
+      </div>`;
+    }
+
     // Dept breakdown for ELLE only
     let deptHtml = "";
     if (r.sid === "miyakojima" && r.ms) {
@@ -612,6 +676,7 @@ function renderStoreCompare() {
             </div>
           </div>
           ${deptHtml}
+          ${tsuExtraHtml}
         </div>
       </div>`;
   }).join("");
