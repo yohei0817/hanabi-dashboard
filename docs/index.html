@@ -120,6 +120,7 @@
       <span class="text-[10px] text-gray-500 tracking-[0.2em] font-light ml-1 hidden sm:inline">DASHBOARD</span>
     </div>
     <div class="flex items-center gap-3">
+      <span class="text-[10px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
       <select id="monthSelect" class="bg-gray-900 border border-gray-700 rounded px-2.5 py-1 text-sm"></select>
       <span id="roleBadge" class="text-xs px-2 py-0.5 rounded border border-gray-600 text-gray-300">…</span>
       <button id="logoutBtn" class="text-xs text-gray-400 hover:text-white">切替</button>
@@ -402,7 +403,7 @@ function render(month) {
   currentMonth = month;
   SCOPE = computeScope(month);
   const ymLabel = month.slice(0,4) + "年" + month.slice(4,6) + "月";
-  document.getElementById("summarySubtitle").textContent = `全社 / ${ymLabel} ${SCOPE.globalElapsedDays}日経過 (${SCOPE.daysInMonth}日中)`;
+  document.getElementById("summarySubtitle").innerHTML = `全社 / ${ymLabel} ${SCOPE.globalElapsedDays}日経過 (${SCOPE.daysInMonth}日中) <span class="text-gray-400">·</span> <span class="text-gray-500">数値はすべて税抜</span>`;
 
   renderTopKpi();
   renderStatusPanel();
