@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-05-08T11:31:34",
+  "generated_at": "2026-05-08T12:57:02",
   "stores": {
     "tsunashima": {
-      "name": "Hanabi綱島店",
+      "name": "Hanabi 綱島店",
       "short": "綱島",
       "brand": "hanabi",
       "departments": [
@@ -10,7 +10,7 @@
       ]
     },
     "miyakojima": {
-      "name": "ELLE by Hanabi",
+      "name": "ELLE by Hanabi 宮古島店",
       "short": "宮古島",
       "brand": "elle",
       "departments": [
@@ -33,7 +33,7 @@
     "latest_month": "202605",
     "stores": {
       "tsunashima": {
-        "name": "Hanabi綱島店",
+        "name": "Hanabi 綱島店",
         "short": "綱島",
         "brand": "hanabi",
         "departments": [
@@ -41,7 +41,7 @@
         ]
       },
       "miyakojima": {
-        "name": "ELLE by Hanabi",
+        "name": "ELLE by Hanabi 宮古島店",
         "short": "宮古島",
         "brand": "elle",
         "departments": [

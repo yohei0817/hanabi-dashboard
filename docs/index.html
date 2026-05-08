@@ -30,7 +30,7 @@
   .brand-logo { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: 0.18em; font-weight: 300; }
   .firework-gradient { background: linear-gradient(90deg, #E53935 0%, #FF6B35 14%, #FFC107 28%, #43A047 42%, #29B6F6 56%, #1E88E5 70%, #8E24AA 84%, #E91E63 100%); }
   .elle-gradient { background: linear-gradient(135deg, #6E5BA8 0%, #D63384 100%); }
-  .hanabi-gradient { background: linear-gradient(135deg, #0A0A0A 0%, #2a2a2a 100%); }
+  .hanabi-gradient { background: linear-gradient(135deg, #000 0%, #1a0d2e 35%, #3d1845 70%, #5a1f4a 100%); }
   .kpi-num { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
   .pct-good { color: var(--accent-green); }
   .pct-warn { color: var(--accent-yellow); }
@@ -510,7 +510,7 @@ function renderStatusPanel() {
     },
     {
       type: pacePct >= 90 ? "good" : pacePct >= 75 ? "warn" : "bad",
-      title: `ペース達成率 ${pacePct.toFixed(1)}%`,
+      title: `進捗ペース ${pacePct.toFixed(1)}%`,
       sub: `${SCOPE.globalElapsedDays}日経過時の期待値 ${fmt(t.expected)} に対し ${fmt(t.sales)}`,
     },
     {
@@ -557,9 +557,9 @@ function renderStoreCompare() {
               <div class="text-xs text-gray-500">/ ${fmtM(r.monthlyTarget)}</div>
             </div>
             <div class="text-right">
-              <div class="text-xs text-gray-500">月達成率</div>
+              <div class="text-xs text-gray-500">月達成</div>
               <div class="text-2xl font-bold kpi-num ${pctClass(monthPct)}">${monthPct.toFixed(1)}%</div>
-              <div class="text-xs ${pctClass(pacePctV)} font-semibold">ペース ${pacePctV.toFixed(1)}%</div>
+              <div class="text-xs ${pctClass(pacePctV)} font-semibold">進捗 ${pacePctV.toFixed(1)}%</div>
             </div>
           </div>
           <div class="progress-track mb-2"><div class="progress-fill" style="width:${w}%; background:${pctColor(monthPct)}"></div><div class="progress-pace" style="left:${paceW}%"></div></div>
@@ -628,7 +628,7 @@ function renderDeptBreakdownSummary() {
             <div class="flex items-center gap-2">
               <span class="w-2 h-7 rounded" style="background:${color}"></span>
               <span class="text-sm font-bold">${d}</span>
-              <span class="badge ${badgeCls(pacePct)} text-[10px]">ペース ${monthly ? pacePct.toFixed(0)+'%' : '—'}</span>
+              <span class="badge ${badgeCls(pacePct)} text-[10px]">進捗 ${monthly ? pacePct.toFixed(0)+'%' : '—'}</span>
             </div>
             <div class="text-right">
               <div class="kpi-num text-lg font-bold">${fmt(sales)}</div>
@@ -638,7 +638,7 @@ function renderDeptBreakdownSummary() {
           <div class="progress-track"><div class="progress-fill" style="width:${w}%; background:${color}"></div><div class="progress-pace" style="left:${paceW}%"></div></div>
           <div class="grid grid-cols-3 gap-2 text-[11px] mt-2">
             <div>
-              <div class="text-gray-400">月達成率</div>
+              <div class="text-gray-400">月達成</div>
               <div class="kpi-num font-semibold ${pctClass(monthPct)}">${monthly ? monthPct.toFixed(1)+'%' : '—'}</div>
             </div>
             <div>
@@ -675,8 +675,8 @@ function renderVisitDonut() {
   if (!root) return;
   const scopes = [
     { id: "company", title: "全社", vis: SCOPE.cVis, headerCls: "" },
-    { id: "tsunashima", title: "Hanabi綱島店", vis: SCOPE.storeRows.find(r=>r.sid==="tsunashima")?.vis, headerCls: "hanabi-gradient" },
-    { id: "miyakojima", title: "ELLE 宮古島", vis: SCOPE.storeRows.find(r=>r.sid==="miyakojima")?.vis, headerCls: "elle-gradient" },
+    { id: "tsunashima", title: "Hanabi 綱島店", vis: SCOPE.storeRows.find(r=>r.sid==="tsunashima")?.vis, headerCls: "hanabi-gradient" },
+    { id: "miyakojima", title: "ELLE by Hanabi 宮古島店", vis: SCOPE.storeRows.find(r=>r.sid==="miyakojima")?.vis, headerCls: "elle-gradient" },
   ];
   root.innerHTML = scopes.map(s => `
     <div class="rounded-lg overflow-hidden border border-gray-200">
@@ -731,7 +731,7 @@ function renderSalesTab() {
               </div>
               <div class="text-right">
                 <div class="kpi-num text-xl font-bold ${pctClass(monthPctV)}">${monthPctV.toFixed(1)}%</div>
-                <div class="text-xs ${pctClass(pacePctV)} font-semibold">ペース ${pacePctV.toFixed(1)}%</div>
+                <div class="text-xs ${pctClass(pacePctV)} font-semibold">進捗 ${pacePctV.toFixed(1)}%</div>
               </div>
             </div>
             <div class="progress-track mb-2"><div class="progress-fill" style="width:${w}%; background:${pctColor(monthPctV)}"></div><div class="progress-pace" style="left:${paceW}%"></div></div>
@@ -802,7 +802,7 @@ function renderDeptBudgetTable() {
   if (!eleMs) { root.innerHTML = "<div class='text-gray-500 text-sm p-4'>データなし</div>"; return; }
   const total = ["ヘア","アイ","ネイル"].reduce((a,d) => a + eleMs.by_dept[d].sales, 0);
   root.innerHTML = `
-    <div class="text-xs text-gray-500 mb-3">対象: ELLE by Hanabi 宮古島店 (Hanabi綱島店はヘア専門のため部門別予算なし)</div>
+    <div class="text-xs text-gray-500 mb-3">対象: ELLE by Hanabi 宮古島店 (Hanabi 綱島店はヘア専門のため部門別予算なし)</div>
     <table class="w-full text-sm">
       <thead class="text-xs text-gray-500">
         <tr class="border-row">
@@ -810,8 +810,8 @@ function renderDeptBudgetTable() {
           <th class="text-right py-2 px-3">当月実績</th>
           <th class="text-right py-2 px-3">年予算 (FY26)</th>
           <th class="text-right py-2 px-3">月平均予算</th>
-          <th class="text-right py-2 px-3">月達成率</th>
-          <th class="text-right py-2 px-3">ペース達成率</th>
+          <th class="text-right py-2 px-3">月達成</th>
+          <th class="text-right py-2 px-3">進捗ペース</th>
           <th class="text-right py-2 pl-3">構成比</th>
         </tr>
       </thead>
@@ -1067,8 +1067,8 @@ function drawMonthlyTrend() {
     data: {
       labels,
       datasets: [
-        { label: "綱島 実績", data: tsuActuals, backgroundColor: "#1E88E5", stack: "actual", borderRadius: 2 },
-        { label: "宮古島 実績", data: eleActuals, backgroundColor: "#D63384", stack: "actual", borderRadius: 2 },
+        { label: "Hanabi 綱島店 実績", data: tsuActuals, backgroundColor: "#1E88E5", stack: "actual", borderRadius: 2 },
+        { label: "ELLE by Hanabi 宮古島店 実績", data: eleActuals, backgroundColor: "#D63384", stack: "actual", borderRadius: 2 },
         { label: "全社 予算", data: totalTargets, type: "line", borderColor: "#1A1A1A", borderWidth: 2, borderDash: [4,4], backgroundColor: "transparent", pointRadius: 3, pointBackgroundColor: "#1A1A1A", tension: 0.2 },
       ]
     },
@@ -1117,8 +1117,8 @@ function drawDailySalesChart(month) {
     data: {
       labels: dates.map(x => x.slice(5)),
       datasets: [
-        { label: "Hanabi綱島店", data: dates.map(x => byDate[x].tsunashima), backgroundColor: "#1E88E5" },
-        { label: "ELLE宮古島店", data: dates.map(x => byDate[x].miyakojima), backgroundColor: "#D63384" },
+        { label: "Hanabi 綱島店", data: dates.map(x => byDate[x].tsunashima), backgroundColor: "#1E88E5" },
+        { label: "ELLE 宮古島店", data: dates.map(x => byDate[x].miyakojima), backgroundColor: "#D63384" },
         { label: "目標 (合算)", data: dates.map(x => byDate[x].target), type: "line", borderColor: "#FBBF24", borderDash: [4,4], backgroundColor: "transparent", pointRadius: 0 }
       ]
     },

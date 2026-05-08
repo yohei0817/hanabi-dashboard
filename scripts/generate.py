@@ -23,8 +23,8 @@ DATA = ROOT / "data"
 DOCS = ROOT / "docs"
 
 STORES = {
-    "tsunashima": {"name": "Hanabi綱島店", "short": "綱島", "brand": "hanabi", "departments": ["ヘア"]},
-    "miyakojima": {"name": "ELLE by Hanabi", "short": "宮古島", "brand": "elle", "departments": ["ヘア", "アイ", "ネイル"]},
+    "tsunashima": {"name": "Hanabi 綱島店", "short": "綱島", "brand": "hanabi", "departments": ["ヘア"]},
+    "miyakojima": {"name": "ELLE by Hanabi 宮古島店", "short": "宮古島", "brand": "elle", "departments": ["ヘア", "アイ", "ネイル"]},
 }
 
 DEPARTMENTS = ("ヘア", "アイ", "ネイル")
