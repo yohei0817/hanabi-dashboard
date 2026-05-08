@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-08T12:57:02",
+  "generated_at": "2026-05-08T17:36:17",
   "stores": {
     "tsunashima": {
       "name": "Hanabi 綱島店",
@@ -59,20 +59,20 @@
     "by_store": {
       "tsunashima": {
         "monthly": {
-          "total_sales": 944569,
-          "tech_sales": 832905,
-          "tech_sales_nominated": 648811,
-          "tech_sales_free": 184094,
+          "total_sales": 1029593,
+          "tech_sales": 917929,
+          "tech_sales_nominated": 710163,
+          "tech_sales_free": 207766,
           "shop_sales": 111664,
-          "customers": 79,
-          "tech_customers": 76,
-          "tech_customers_nominated": 60,
-          "tech_customers_free": 16,
+          "customers": 88,
+          "tech_customers": 85,
+          "tech_customers_nominated": 66,
+          "tech_customers_free": 19,
           "staff_count": 6,
           "by_dept": {
             "ヘア": {
-              "sales": 944569,
-              "customers": 79,
+              "sales": 1029593,
+              "customers": 88,
               "staff_count": 6
             },
             "アイ": {
@@ -95,36 +95,36 @@
             "馬場 美沙紀"
           ]
         },
-        "daily_sum_sales": 944569,
+        "daily_sum_sales": 1029593,
         "daily_sum_target": 3959000,
-        "days_recorded": 7
+        "days_recorded": 8
       },
       "miyakojima": {
         "monthly": {
-          "total_sales": 1103556,
-          "tech_sales": 1085161,
-          "tech_sales_nominated": 402359,
-          "tech_sales_free": 682802,
-          "shop_sales": 18395,
-          "customers": 154,
-          "tech_customers": 151,
-          "tech_customers_nominated": 52,
-          "tech_customers_free": 99,
+          "total_sales": 1285854,
+          "tech_sales": 1264859,
+          "tech_sales_nominated": 493949,
+          "tech_sales_free": 770910,
+          "shop_sales": 20995,
+          "customers": 175,
+          "tech_customers": 172,
+          "tech_customers_nominated": 61,
+          "tech_customers_free": 111,
           "staff_count": 7,
           "by_dept": {
             "ヘア": {
-              "sales": 353986,
-              "customers": 39,
+              "sales": 433131,
+              "customers": 44,
               "staff_count": 2
             },
             "アイ": {
-              "sales": 452738,
-              "customers": 67,
+              "sales": 510074,
+              "customers": 76,
               "staff_count": 3
             },
             "ネイル": {
-              "sales": 296832,
-              "customers": 48,
+              "sales": 342649,
+              "customers": 55,
               "staff_count": 2
             }
           },
@@ -138,13 +138,13 @@
             "水野 陽平"
           ]
         },
-        "daily_sum_sales": 1119556,
+        "daily_sum_sales": 1285854,
         "daily_sum_target": 0,
-        "days_recorded": 7
+        "days_recorded": 8
       }
     },
     "company_total": {
-      "total_sales": 2064125,
+      "total_sales": 2315447,
       "customers": 0,
       "target": 3959000
     }
@@ -152,20 +152,20 @@
   "monthly_by_store": {
     "tsunashima": {
       "202605": {
-        "total_sales": 944569,
-        "tech_sales": 832905,
-        "tech_sales_nominated": 648811,
-        "tech_sales_free": 184094,
+        "total_sales": 1029593,
+        "tech_sales": 917929,
+        "tech_sales_nominated": 710163,
+        "tech_sales_free": 207766,
         "shop_sales": 111664,
-        "customers": 79,
-        "tech_customers": 76,
-        "tech_customers_nominated": 60,
-        "tech_customers_free": 16,
+        "customers": 88,
+        "tech_customers": 85,
+        "tech_customers_nominated": 66,
+        "tech_customers_free": 19,
         "staff_count": 6,
         "by_dept": {
           "ヘア": {
-            "sales": 944569,
-            "customers": 79,
+            "sales": 1029593,
+            "customers": 88,
             "staff_count": 6
           },
           "アイ": {
@@ -191,30 +191,30 @@
     },
     "miyakojima": {
       "202605": {
-        "total_sales": 1103556,
-        "tech_sales": 1085161,
-        "tech_sales_nominated": 402359,
-        "tech_sales_free": 682802,
-        "shop_sales": 18395,
-        "customers": 154,
-        "tech_customers": 151,
-        "tech_customers_nominated": 52,
-        "tech_customers_free": 99,
+        "total_sales": 1285854,
+        "tech_sales": 1264859,
+        "tech_sales_nominated": 493949,
+        "tech_sales_free": 770910,
+        "shop_sales": 20995,
+        "customers": 175,
+        "tech_customers": 172,
+        "tech_customers_nominated": 61,
+        "tech_customers_free": 111,
         "staff_count": 7,
         "by_dept": {
           "ヘア": {
-            "sales": 353986,
-            "customers": 39,
+            "sales": 433131,
+            "customers": 44,
             "staff_count": 2
           },
           "アイ": {
-            "sales": 452738,
-            "customers": 67,
+            "sales": 510074,
+            "customers": 76,
             "staff_count": 3
           },
           "ネイル": {
-            "sales": 296832,
-            "customers": 48,
+            "sales": 342649,
+            "customers": 55,
             "staff_count": 2
           }
         },
@@ -357,41 +357,41 @@
           "store": "miyakojima",
           "date": "2026-05-07",
           "weekday": "木",
-          "new": 9,
-          "repeat": 12,
+          "new": 13,
+          "repeat": 16,
           "referral": 0,
           "nominated": 0,
-          "customers": 21,
+          "customers": 29,
           "customer_target": 0,
           "customer_pct": 0.0,
-          "sales_grand_menu": 44000,
+          "sales_grand_menu": 106045,
           "sales_coupon": 0,
-          "sales_other": 92017,
-          "sales": 136017,
+          "sales_other": 128234,
+          "sales": 234279,
           "sales_target": 0,
           "sales_pct": 0.0,
-          "spend_per_customer": 6477,
-          "reservations_next": 30
+          "spend_per_customer": 8079,
+          "reservations_next": 29
         },
         {
           "store": "miyakojima",
           "date": "2026-05-08",
           "weekday": "金",
-          "new": 0,
-          "repeat": 0,
+          "new": 4,
+          "repeat": 6,
           "referral": 0,
           "nominated": 0,
-          "customers": 0,
+          "customers": 10,
           "customer_target": 0,
           "customer_pct": 0.0,
-          "sales_grand_menu": 0,
+          "sales_grand_menu": 10500,
           "sales_coupon": 0,
-          "sales_other": 0,
-          "sales": 0,
+          "sales_other": 57536,
+          "sales": 68036,
           "sales_target": 0,
           "sales_pct": 0.0,
-          "spend_per_customer": 0,
-          "reservations_next": 23
+          "spend_per_customer": 6804,
+          "reservations_next": 17
         },
         {
           "store": "miyakojima",
@@ -411,7 +411,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 28
+          "reservations_next": 29
         },
         {
           "store": "miyakojima",
@@ -451,7 +451,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 28
+          "reservations_next": 31
         },
         {
           "store": "miyakojima",
@@ -471,7 +471,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 23
+          "reservations_next": 24
         },
         {
           "store": "miyakojima",
@@ -511,7 +511,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 16
+          "reservations_next": 20
         },
         {
           "store": "miyakojima",
@@ -531,7 +531,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 11
+          "reservations_next": 18
         },
         {
           "store": "miyakojima",
@@ -551,7 +551,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 8
+          "reservations_next": 12
         },
         {
           "store": "miyakojima",
@@ -591,7 +591,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 10
+          "reservations_next": 11
         },
         {
           "store": "miyakojima",
@@ -651,7 +651,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 3
+          "reservations_next": 5
         },
         {
           "store": "miyakojima",
@@ -671,7 +671,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 6
+          "reservations_next": 7
         },
         {
           "store": "miyakojima",
@@ -711,7 +711,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 7
+          "reservations_next": 8
         },
         {
           "store": "miyakojima",
@@ -751,7 +751,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 1
+          "reservations_next": 2
         },
         {
           "store": "miyakojima",
@@ -771,7 +771,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 4
+          "reservations_next": 5
         },
         {
           "store": "miyakojima",
@@ -791,7 +791,7 @@
           "sales_target": 0,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 4
+          "reservations_next": 5
         },
         {
           "store": "miyakojima",
@@ -981,41 +981,41 @@
           "store": "tsunashima",
           "date": "2026-05-07",
           "weekday": "木",
-          "new": 0,
+          "new": 2,
           "repeat": 5,
           "referral": 0,
           "nominated": 0,
-          "customers": 5,
+          "customers": 7,
           "customer_target": 12,
-          "customer_pct": 41.67,
-          "sales_grand_menu": 26624,
-          "sales_coupon": 26821,
+          "customer_pct": 58.33,
+          "sales_grand_menu": 27458,
+          "sales_coupon": 44659,
           "sales_other": 0,
-          "sales": 53445,
+          "sales": 72117,
           "sales_target": 127709,
-          "sales_pct": 46.03,
-          "spend_per_customer": 10689,
+          "sales_pct": 62.12,
+          "spend_per_customer": 10302,
           "reservations_next": 7
         },
         {
           "store": "tsunashima",
           "date": "2026-05-08",
           "weekday": "金",
-          "new": 0,
-          "repeat": 0,
+          "new": 2,
+          "repeat": 5,
           "referral": 0,
           "nominated": 0,
-          "customers": 0,
+          "customers": 7,
           "customer_target": 12,
-          "customer_pct": 0.0,
-          "sales_grand_menu": 0,
-          "sales_coupon": 0,
+          "customer_pct": 58.33,
+          "sales_grand_menu": 2882,
+          "sales_coupon": 63470,
           "sales_other": 0,
-          "sales": 0,
+          "sales": 66352,
           "sales_target": 127709,
-          "sales_pct": 0.0,
-          "spend_per_customer": 0,
-          "reservations_next": 9
+          "sales_pct": 57.15,
+          "spend_per_customer": 9479,
+          "reservations_next": 11
         },
         {
           "store": "tsunashima",
@@ -1035,7 +1035,7 @@
           "sales_target": 127709,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 14
+          "reservations_next": 16
         },
         {
           "store": "tsunashima",
@@ -1095,7 +1095,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 5
+          "reservations_next": 7
         },
         {
           "store": "tsunashima",
@@ -1115,7 +1115,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 6
+          "reservations_next": 7
         },
         {
           "store": "tsunashima",
@@ -1135,7 +1135,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 2
+          "reservations_next": 3
         },
         {
           "store": "tsunashima",
@@ -1195,7 +1195,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 2
+          "reservations_next": 3
         },
         {
           "store": "tsunashima",
@@ -1215,7 +1215,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 1
+          "reservations_next": 2
         },
         {
           "store": "tsunashima",
@@ -1455,7 +1455,7 @@
           "sales_target": 127710,
           "sales_pct": 0.0,
           "spend_per_customer": 0,
-          "reservations_next": 6
+          "reservations_next": 8
         },
         {
           "store": "tsunashima",
@@ -1483,20 +1483,20 @@
   "visitors_by_store": {
     "miyakojima": {
       "202605": {
-        "new": 57,
-        "repeat": 95,
+        "new": 65,
+        "repeat": 105,
         "referral": 0,
         "nominated": 2,
-        "customers": 154
+        "customers": 172
       }
     },
     "tsunashima": {
       "202605": {
-        "new": 9,
-        "repeat": 69,
+        "new": 13,
+        "repeat": 74,
         "referral": 0,
         "nominated": 1,
-        "customers": 79
+        "customers": 88
       }
     }
   },
@@ -1507,21 +1507,21 @@
       "name": "水野 友里",
       "category": "",
       "work_days": 0,
-      "total_sales": 139280,
-      "customers": 11,
-      "spend_per_customer": 12662,
-      "tech_sales": 132445,
-      "tech_customers": 11,
-      "tech_sales_nominated": 132445,
-      "tech_customers_nominated": 11,
+      "total_sales": 171888,
+      "customers": 13,
+      "spend_per_customer": 13222,
+      "tech_sales": 165053,
+      "tech_customers": 13,
+      "tech_sales_nominated": 165053,
+      "tech_customers_nominated": 13,
       "tech_sales_free": 0,
       "tech_customers_free": 0,
       "shop_sales": 6835,
       "shop_customers": 2,
-      "shop_pct": 4.91,
-      "purchase_pct": 18.18,
+      "shop_pct": 3.98,
+      "purchase_pct": 15.38,
       "dept_sales": {
-        "ヘア": 139280,
+        "ヘア": 171888,
         "アイ": 0,
         "ネイル": 0
       },
@@ -1561,21 +1561,21 @@
       "name": "名嘉眞 美里",
       "category": "",
       "work_days": 0,
-      "total_sales": 190028,
-      "customers": 19,
-      "spend_per_customer": 10001,
-      "tech_sales": 183183,
-      "tech_customers": 19,
-      "tech_sales_nominated": 177747,
-      "tech_customers_nominated": 18,
-      "tech_sales_free": 5436,
-      "tech_customers_free": 1,
+      "total_sales": 223772,
+      "customers": 24,
+      "spend_per_customer": 9324,
+      "tech_sales": 216927,
+      "tech_customers": 24,
+      "tech_sales_nominated": 206491,
+      "tech_customers_nominated": 22,
+      "tech_sales_free": 10436,
+      "tech_customers_free": 2,
       "shop_sales": 6845,
       "shop_customers": 2,
-      "shop_pct": 3.6,
-      "purchase_pct": 10.53,
+      "shop_pct": 3.06,
+      "purchase_pct": 8.33,
       "dept_sales": {
-        "ヘア": 190028,
+        "ヘア": 223772,
         "アイ": 0,
         "ネイル": 0
       },
@@ -1588,21 +1588,21 @@
       "name": "渡辺 真也",
       "category": "",
       "work_days": 0,
-      "total_sales": 342708,
-      "customers": 25,
-      "spend_per_customer": 13708,
-      "tech_sales": 333608,
-      "tech_customers": 25,
+      "total_sales": 361380,
+      "customers": 27,
+      "spend_per_customer": 13384,
+      "tech_sales": 352280,
+      "tech_customers": 27,
       "tech_sales_nominated": 265192,
       "tech_customers_nominated": 20,
-      "tech_sales_free": 68416,
-      "tech_customers_free": 5,
+      "tech_sales_free": 87088,
+      "tech_customers_free": 7,
       "shop_sales": 9100,
       "shop_customers": 2,
-      "shop_pct": 2.66,
-      "purchase_pct": 8.0,
+      "shop_pct": 2.52,
+      "purchase_pct": 7.41,
       "dept_sales": {
-        "ヘア": 342708,
+        "ヘア": 361380,
         "アイ": 0,
         "ネイル": 0
       },
@@ -1669,21 +1669,21 @@
       "name": "佐久間 理加",
       "category": "",
       "work_days": 0,
-      "total_sales": 349891,
-      "customers": 38,
-      "spend_per_customer": 9208,
-      "tech_sales": 346091,
-      "tech_customers": 37,
-      "tech_sales_nominated": 150091,
-      "tech_customers_nominated": 15,
-      "tech_sales_free": 196000,
-      "tech_customers_free": 22,
-      "shop_sales": 3800,
-      "shop_customers": 1,
-      "shop_pct": 1.09,
-      "purchase_pct": 2.63,
+      "total_sales": 429036,
+      "customers": 43,
+      "spend_per_customer": 9978,
+      "tech_sales": 422636,
+      "tech_customers": 42,
+      "tech_sales_nominated": 197091,
+      "tech_customers_nominated": 17,
+      "tech_sales_free": 225545,
+      "tech_customers_free": 25,
+      "shop_sales": 6400,
+      "shop_customers": 2,
+      "shop_pct": 1.49,
+      "purchase_pct": 4.65,
       "dept_sales": {
-        "ヘア": 349891,
+        "ヘア": 429036,
         "アイ": 0,
         "ネイル": 0
       },
@@ -1696,22 +1696,22 @@
       "name": "山尾 奈穂",
       "category": "",
       "work_days": 0,
-      "total_sales": 221814,
-      "customers": 31,
-      "spend_per_customer": 7155,
-      "tech_sales": 214814,
-      "tech_customers": 31,
-      "tech_sales_nominated": 131134,
-      "tech_customers_nominated": 18,
-      "tech_sales_free": 83680,
-      "tech_customers_free": 13,
+      "total_sales": 246450,
+      "customers": 35,
+      "spend_per_customer": 7041,
+      "tech_sales": 239450,
+      "tech_customers": 35,
+      "tech_sales_nominated": 150770,
+      "tech_customers_nominated": 21,
+      "tech_sales_free": 88680,
+      "tech_customers_free": 14,
       "shop_sales": 7000,
       "shop_customers": 2,
-      "shop_pct": 3.16,
-      "purchase_pct": 6.45,
+      "shop_pct": 2.84,
+      "purchase_pct": 5.71,
       "dept_sales": {
         "ヘア": 3000,
-        "アイ": 218814,
+        "アイ": 243450,
         "ネイル": 0
       },
       "primary_dept": "アイ",
@@ -1723,22 +1723,22 @@
       "name": "大橋 未来",
       "category": "",
       "work_days": 0,
-      "total_sales": 62790,
-      "customers": 9,
-      "spend_per_customer": 6977,
-      "tech_sales": 62790,
-      "tech_customers": 9,
-      "tech_sales_nominated": 18745,
-      "tech_customers_nominated": 3,
-      "tech_sales_free": 44045,
-      "tech_customers_free": 6,
+      "total_sales": 90490,
+      "customers": 13,
+      "spend_per_customer": 6961,
+      "tech_sales": 90490,
+      "tech_customers": 13,
+      "tech_sales_nominated": 25445,
+      "tech_customers_nominated": 4,
+      "tech_sales_free": 65045,
+      "tech_customers_free": 9,
       "shop_sales": 0,
       "shop_customers": 0,
       "shop_pct": 0.0,
       "purchase_pct": 0.0,
       "dept_sales": {
         "ヘア": 500,
-        "アイ": 62290,
+        "アイ": 89990,
         "ネイル": 0
       },
       "primary_dept": "アイ",
@@ -1750,15 +1750,15 @@
       "name": "内藤 ひなき",
       "category": "",
       "work_days": 0,
-      "total_sales": 118979,
-      "customers": 22,
-      "spend_per_customer": 5408,
-      "tech_sales": 118979,
-      "tech_customers": 22,
-      "tech_sales_nominated": 22036,
-      "tech_customers_nominated": 4,
-      "tech_sales_free": 96943,
-      "tech_customers_free": 18,
+      "total_sales": 131379,
+      "customers": 24,
+      "spend_per_customer": 5474,
+      "tech_sales": 131379,
+      "tech_customers": 24,
+      "tech_sales_nominated": 27236,
+      "tech_customers_nominated": 5,
+      "tech_sales_free": 104143,
+      "tech_customers_free": 19,
       "shop_sales": 0,
       "shop_customers": 0,
       "shop_pct": 0.0,
@@ -1766,7 +1766,7 @@
       "dept_sales": {
         "ヘア": 0,
         "アイ": 0,
-        "ネイル": 118979
+        "ネイル": 131379
       },
       "primary_dept": "ネイル",
       "hidden": false
@@ -1777,15 +1777,15 @@
       "name": "一宮 有澄",
       "category": "",
       "work_days": 0,
-      "total_sales": 177853,
-      "customers": 26,
-      "spend_per_customer": 6841,
-      "tech_sales": 177853,
-      "tech_customers": 26,
-      "tech_sales_nominated": 80353,
-      "tech_customers_nominated": 12,
-      "tech_sales_free": 97500,
-      "tech_customers_free": 14,
+      "total_sales": 211270,
+      "customers": 31,
+      "spend_per_customer": 6815,
+      "tech_sales": 211270,
+      "tech_customers": 31,
+      "tech_sales_nominated": 93407,
+      "tech_customers_nominated": 14,
+      "tech_sales_free": 117863,
+      "tech_customers_free": 17,
       "shop_sales": 0,
       "shop_customers": 0,
       "shop_pct": 0.0,
@@ -1793,7 +1793,7 @@
       "dept_sales": {
         "ヘア": 0,
         "アイ": 0,
-        "ネイル": 177853
+        "ネイル": 211270
       },
       "primary_dept": "ネイル",
       "hidden": false
@@ -1804,22 +1804,22 @@
       "name": "宮里 乃の子",
       "category": "",
       "work_days": 0,
-      "total_sales": 168134,
-      "customers": 27,
-      "spend_per_customer": 6227,
-      "tech_sales": 164634,
-      "tech_customers": 26,
+      "total_sales": 173134,
+      "customers": 28,
+      "spend_per_customer": 6183,
+      "tech_sales": 169634,
+      "tech_customers": 27,
       "tech_sales_nominated": 0,
       "tech_customers_nominated": 0,
-      "tech_sales_free": 164634,
-      "tech_customers_free": 26,
+      "tech_sales_free": 169634,
+      "tech_customers_free": 27,
       "shop_sales": 3500,
       "shop_customers": 1,
-      "shop_pct": 2.08,
-      "purchase_pct": 3.7,
+      "shop_pct": 2.02,
+      "purchase_pct": 3.57,
       "dept_sales": {
         "ヘア": 3000,
-        "アイ": 165134,
+        "アイ": 170134,
         "ネイル": 0
       },
       "primary_dept": "アイ",
