@@ -29,9 +29,16 @@ STORES = {
 
 DEPARTMENTS = ("ヘア", "アイ", "ネイル")
 
-# Names whose sales count toward totals but are hidden from staff display/ranking
-# (e.g. owner buying staff retail products under his own name)
-HIDDEN_STAFF_NAMES = {"水野 陽平"}
+# Names whose sales count toward totals but are hidden from staff display/ranking.
+# Includes:
+#   - Owner/management who bought retail under their name (水野 陽平)
+#   - Placeholder names for unassigned transactions (未設定, 指名なし, ネイル スタッフ)
+HIDDEN_STAFF_NAMES = {
+    "水野 陽平",
+    "未設定",
+    "指名なし",
+    "ネイル スタッフ",
+}
 
 
 def classify_department(col_name: str) -> str:

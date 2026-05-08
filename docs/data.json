@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-08T17:56:06",
+  "generated_at": "2026-05-08T18:53:40",
   "stores": {
     "tsunashima": {
       "name": "Hanabi 綱島店",
@@ -13910,6 +13910,628 @@
           "reservations_next": 11
         }
       ],
+      "202601": [
+        {
+          "store": "miyakojima",
+          "date": "2026-01-01",
+          "weekday": "木",
+          "new": 0,
+          "repeat": 0,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 0,
+          "customer_target": 27,
+          "customer_pct": 0.0,
+          "sales_grand_menu": 0,
+          "sales_coupon": 0,
+          "sales_other": 0,
+          "sales": 0,
+          "sales_target": 209758,
+          "sales_pct": 0.0,
+          "spend_per_customer": 0,
+          "reservations_next": 0
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-02",
+          "weekday": "金",
+          "new": 0,
+          "repeat": 0,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 0,
+          "customer_target": 28,
+          "customer_pct": 0.0,
+          "sales_grand_menu": 0,
+          "sales_coupon": 0,
+          "sales_other": 0,
+          "sales": 0,
+          "sales_target": 209758,
+          "sales_pct": 0.0,
+          "spend_per_customer": 0,
+          "reservations_next": 0
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-03",
+          "weekday": "土",
+          "new": 0,
+          "repeat": 0,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 0,
+          "customer_target": 28,
+          "customer_pct": 0.0,
+          "sales_grand_menu": 0,
+          "sales_coupon": 0,
+          "sales_other": 0,
+          "sales": 0,
+          "sales_target": 209758,
+          "sales_pct": 0.0,
+          "spend_per_customer": 0,
+          "reservations_next": 0
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-04",
+          "weekday": "日",
+          "new": 6,
+          "repeat": 13,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 19,
+          "customer_target": 28,
+          "customer_pct": 67.86,
+          "sales_grand_menu": 0,
+          "sales_coupon": 0,
+          "sales_other": 105781,
+          "sales": 105781,
+          "sales_target": 209758,
+          "sales_pct": 55.47,
+          "spend_per_customer": 5567,
+          "reservations_next": 19
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-05",
+          "weekday": "月",
+          "new": 7,
+          "repeat": 13,
+          "referral": 0,
+          "nominated": 1,
+          "customers": 21,
+          "customer_target": 28,
+          "customer_pct": 75.0,
+          "sales_grand_menu": 1500,
+          "sales_coupon": 0,
+          "sales_other": 121100,
+          "sales": 122600,
+          "sales_target": 209758,
+          "sales_pct": 64.29,
+          "spend_per_customer": 5838,
+          "reservations_next": 20
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-06",
+          "weekday": "火",
+          "new": 13,
+          "repeat": 26,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 39,
+          "customer_target": 28,
+          "customer_pct": 139.29,
+          "sales_grand_menu": 64000,
+          "sales_coupon": 0,
+          "sales_other": 249687,
+          "sales": 313687,
+          "sales_target": 209758,
+          "sales_pct": 164.5,
+          "spend_per_customer": 8043,
+          "reservations_next": 40
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-07",
+          "weekday": "水",
+          "new": 9,
+          "repeat": 32,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 41,
+          "customer_target": 28,
+          "customer_pct": 146.43,
+          "sales_grand_menu": 95000,
+          "sales_coupon": 0,
+          "sales_other": 218816,
+          "sales": 313816,
+          "sales_target": 209758,
+          "sales_pct": 164.57,
+          "spend_per_customer": 7654,
+          "reservations_next": 41
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-08",
+          "weekday": "木",
+          "new": 12,
+          "repeat": 23,
+          "referral": 0,
+          "nominated": 2,
+          "customers": 37,
+          "customer_target": 28,
+          "customer_pct": 132.14,
+          "sales_grand_menu": 73500,
+          "sales_coupon": 0,
+          "sales_other": 215920,
+          "sales": 289420,
+          "sales_target": 209758,
+          "sales_pct": 151.78,
+          "spend_per_customer": 7822,
+          "reservations_next": 36
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-09",
+          "weekday": "金",
+          "new": 7,
+          "repeat": 10,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 17,
+          "customer_target": 28,
+          "customer_pct": 60.71,
+          "sales_grand_menu": 3000,
+          "sales_coupon": 0,
+          "sales_other": 108081,
+          "sales": 111081,
+          "sales_target": 209758,
+          "sales_pct": 58.25,
+          "spend_per_customer": 6534,
+          "reservations_next": 18
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-10",
+          "weekday": "土",
+          "new": 12,
+          "repeat": 19,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 31,
+          "customer_target": 28,
+          "customer_pct": 110.71,
+          "sales_grand_menu": 56000,
+          "sales_coupon": 0,
+          "sales_other": 176480,
+          "sales": 232480,
+          "sales_target": 209758,
+          "sales_pct": 121.92,
+          "spend_per_customer": 7499,
+          "reservations_next": 32
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-11",
+          "weekday": "日",
+          "new": 5,
+          "repeat": 24,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 29,
+          "customer_target": 28,
+          "customer_pct": 103.57,
+          "sales_grand_menu": 64000,
+          "sales_coupon": 0,
+          "sales_other": 184990,
+          "sales": 248990,
+          "sales_target": 209758,
+          "sales_pct": 130.57,
+          "spend_per_customer": 8586,
+          "reservations_next": 31
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-12",
+          "weekday": "月",
+          "new": 7,
+          "repeat": 21,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 28,
+          "customer_target": 28,
+          "customer_pct": 100.0,
+          "sales_grand_menu": 87500,
+          "sales_coupon": 0,
+          "sales_other": 147578,
+          "sales": 235078,
+          "sales_target": 209758,
+          "sales_pct": 123.28,
+          "spend_per_customer": 8396,
+          "reservations_next": 28
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-13",
+          "weekday": "火",
+          "new": 5,
+          "repeat": 14,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 19,
+          "customer_target": 28,
+          "customer_pct": 67.86,
+          "sales_grand_menu": 75045,
+          "sales_coupon": 0,
+          "sales_other": 97508,
+          "sales": 172553,
+          "sales_target": 209758,
+          "sales_pct": 90.49,
+          "spend_per_customer": 9082,
+          "reservations_next": 20
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-14",
+          "weekday": "水",
+          "new": 16,
+          "repeat": 33,
+          "referral": 0,
+          "nominated": 1,
+          "customers": 50,
+          "customer_target": 28,
+          "customer_pct": 178.57,
+          "sales_grand_menu": 99627,
+          "sales_coupon": 0,
+          "sales_other": 258180,
+          "sales": 357807,
+          "sales_target": 209758,
+          "sales_pct": 187.64,
+          "spend_per_customer": 7156,
+          "reservations_next": 24
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-15",
+          "weekday": "木",
+          "new": 0,
+          "repeat": 0,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 0,
+          "customer_target": 28,
+          "customer_pct": 0.0,
+          "sales_grand_menu": 0,
+          "sales_coupon": 0,
+          "sales_other": 0,
+          "sales": 0,
+          "sales_target": 209758,
+          "sales_pct": 0.0,
+          "spend_per_customer": 0,
+          "reservations_next": 26
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-16",
+          "weekday": "金",
+          "new": 10,
+          "repeat": 26,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 36,
+          "customer_target": 28,
+          "customer_pct": 128.57,
+          "sales_grand_menu": 137000,
+          "sales_coupon": 0,
+          "sales_other": 162360,
+          "sales": 299360,
+          "sales_target": 209758,
+          "sales_pct": 156.99,
+          "spend_per_customer": 8316,
+          "reservations_next": 36
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-17",
+          "weekday": "土",
+          "new": 8,
+          "repeat": 32,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 40,
+          "customer_target": 28,
+          "customer_pct": 142.86,
+          "sales_grand_menu": 87500,
+          "sales_coupon": 0,
+          "sales_other": 169817,
+          "sales": 257317,
+          "sales_target": 209758,
+          "sales_pct": 134.94,
+          "spend_per_customer": 6433,
+          "reservations_next": 40
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-18",
+          "weekday": "日",
+          "new": 10,
+          "repeat": 22,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 32,
+          "customer_target": 28,
+          "customer_pct": 114.29,
+          "sales_grand_menu": 99700,
+          "sales_coupon": 0,
+          "sales_other": 142373,
+          "sales": 242073,
+          "sales_target": 209758,
+          "sales_pct": 126.95,
+          "spend_per_customer": 7565,
+          "reservations_next": 34
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-19",
+          "weekday": "月",
+          "new": 5,
+          "repeat": 17,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 22,
+          "customer_target": 28,
+          "customer_pct": 78.57,
+          "sales_grand_menu": 40500,
+          "sales_coupon": 0,
+          "sales_other": 123771,
+          "sales": 164271,
+          "sales_target": 209758,
+          "sales_pct": 86.15,
+          "spend_per_customer": 7467,
+          "reservations_next": 22
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-20",
+          "weekday": "火",
+          "new": 11,
+          "repeat": 15,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 26,
+          "customer_target": 28,
+          "customer_pct": 92.86,
+          "sales_grand_menu": 53000,
+          "sales_coupon": 0,
+          "sales_other": 127327,
+          "sales": 180327,
+          "sales_target": 209758,
+          "sales_pct": 94.57,
+          "spend_per_customer": 6936,
+          "reservations_next": 26
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-21",
+          "weekday": "水",
+          "new": 5,
+          "repeat": 22,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 27,
+          "customer_target": 28,
+          "customer_pct": 96.43,
+          "sales_grand_menu": 130045,
+          "sales_coupon": 0,
+          "sales_other": 125472,
+          "sales": 255517,
+          "sales_target": 209758,
+          "sales_pct": 134.0,
+          "spend_per_customer": 9464,
+          "reservations_next": 28
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-22",
+          "weekday": "木",
+          "new": 5,
+          "repeat": 14,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 19,
+          "customer_target": 28,
+          "customer_pct": 67.86,
+          "sales_grand_menu": 93500,
+          "sales_coupon": 0,
+          "sales_other": 66700,
+          "sales": 160200,
+          "sales_target": 209758,
+          "sales_pct": 84.01,
+          "spend_per_customer": 8432,
+          "reservations_next": 19
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-23",
+          "weekday": "金",
+          "new": 16,
+          "repeat": 24,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 40,
+          "customer_target": 28,
+          "customer_pct": 142.86,
+          "sales_grand_menu": 144000,
+          "sales_coupon": 0,
+          "sales_other": 178072,
+          "sales": 322072,
+          "sales_target": 209758,
+          "sales_pct": 168.9,
+          "spend_per_customer": 8052,
+          "reservations_next": 41
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-24",
+          "weekday": "土",
+          "new": 16,
+          "repeat": 19,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 35,
+          "customer_target": 28,
+          "customer_pct": 125.0,
+          "sales_grand_menu": 99700,
+          "sales_coupon": 0,
+          "sales_other": 157145,
+          "sales": 256845,
+          "sales_target": 209758,
+          "sales_pct": 134.69,
+          "spend_per_customer": 7338,
+          "reservations_next": 35
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-25",
+          "weekday": "日",
+          "new": 7,
+          "repeat": 7,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 14,
+          "customer_target": 28,
+          "customer_pct": 50.0,
+          "sales_grand_menu": 50000,
+          "sales_coupon": 0,
+          "sales_other": 60526,
+          "sales": 110526,
+          "sales_target": 209758,
+          "sales_pct": 57.96,
+          "spend_per_customer": 7895,
+          "reservations_next": 14
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-26",
+          "weekday": "月",
+          "new": 7,
+          "repeat": 18,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 25,
+          "customer_target": 28,
+          "customer_pct": 89.29,
+          "sales_grand_menu": 41000,
+          "sales_coupon": 0,
+          "sales_other": 134100,
+          "sales": 175100,
+          "sales_target": 209758,
+          "sales_pct": 91.82,
+          "spend_per_customer": 7004,
+          "reservations_next": 25
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-27",
+          "weekday": "火",
+          "new": 7,
+          "repeat": 22,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 29,
+          "customer_target": 28,
+          "customer_pct": 103.57,
+          "sales_grand_menu": 84500,
+          "sales_coupon": 0,
+          "sales_other": 151317,
+          "sales": 235817,
+          "sales_target": 209758,
+          "sales_pct": 123.67,
+          "spend_per_customer": 8132,
+          "reservations_next": 30
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-28",
+          "weekday": "水",
+          "new": 13,
+          "repeat": 18,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 31,
+          "customer_target": 28,
+          "customer_pct": 110.71,
+          "sales_grand_menu": 103000,
+          "sales_coupon": 0,
+          "sales_other": 159667,
+          "sales": 262667,
+          "sales_target": 209758,
+          "sales_pct": 137.75,
+          "spend_per_customer": 8473,
+          "reservations_next": 32
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-29",
+          "weekday": "木",
+          "new": 12,
+          "repeat": 9,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 21,
+          "customer_target": 28,
+          "customer_pct": 75.0,
+          "sales_grand_menu": 26000,
+          "sales_coupon": 0,
+          "sales_other": 87900,
+          "sales": 113900,
+          "sales_target": 209758,
+          "sales_pct": 59.73,
+          "spend_per_customer": 5424,
+          "reservations_next": 21
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-30",
+          "weekday": "金",
+          "new": 9,
+          "repeat": 14,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 23,
+          "customer_target": 28,
+          "customer_pct": 82.14,
+          "sales_grand_menu": 81500,
+          "sales_coupon": 0,
+          "sales_other": 94490,
+          "sales": 175990,
+          "sales_target": 209759,
+          "sales_pct": 92.29,
+          "spend_per_customer": 7652,
+          "reservations_next": 25
+        },
+        {
+          "store": "miyakojima",
+          "date": "2026-01-31",
+          "weekday": "土",
+          "new": 8,
+          "repeat": 19,
+          "referral": 0,
+          "nominated": 0,
+          "customers": 27,
+          "customer_target": 28,
+          "customer_pct": 96.43,
+          "sales_grand_menu": 71500,
+          "sales_coupon": 0,
+          "sales_other": 135452,
+          "sales": 206952,
+          "sales_target": 209759,
+          "sales_pct": 108.53,
+          "spend_per_customer": 7665,
+          "reservations_next": 27
+        }
+      ],
       "202605": [
         {
           "store": "miyakojima",
@@ -16471,6 +17093,13 @@
         "nominated": 0,
         "customers": 0
       },
+      "202601": {
+        "new": 248,
+        "repeat": 526,
+        "referral": 0,
+        "nominated": 4,
+        "customers": 778
+      },
       "202605": {
         "new": 65,
         "repeat": 105,
@@ -16824,7 +17453,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -17418,7 +18047,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -17445,7 +18074,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -18147,7 +18776,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -18471,7 +19100,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -18498,7 +19127,7 @@
         "ネイル": 0
       },
       "primary_dept": "アイ",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -18714,7 +19343,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -18903,7 +19532,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -18930,7 +19559,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -19281,7 +19910,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -19308,7 +19937,7 @@
         "ネイル": 0
       },
       "primary_dept": "アイ",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -19821,7 +20450,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -19929,7 +20558,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -20307,7 +20936,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -20334,7 +20963,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -20874,7 +21503,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -21063,7 +21692,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "miyakojima",
@@ -21306,7 +21935,7 @@
         "ネイル": 0
       },
       "primary_dept": "ヘア",
-      "hidden": false
+      "hidden": true
     },
     {
       "store": "tsunashima",
@@ -21765,7 +22394,7 @@
         "ネイル": 0
       },
       "primary_dept": "アイ",
-      "hidden": false
+      "hidden": true
     }
   ],
   "budgets": {

@@ -169,12 +169,9 @@ def configure_and_download(page: Page, report: str, year_month: str, store_code:
         page.wait_for_load_state("networkidle", timeout=20000)
     except Exception:
         pass
-    # Wait for data table populated
-    try:
-        page.wait_for_selector("#salesList tbody tr, #staffList tbody tr, table tbody tr", timeout=15000)
-    except Exception:
-        pass
-    time.sleep(3)
+    # Wait for grid data + give time for icons to render. 8s padding is critical
+    # (debug confirmed 8s succeeds reliably; shorter waits fail intermittently).
+    time.sleep(8)
     page.screenshot(path=str(log_dir / f"results_{report}_{store_code}.png"), full_page=True)
     (log_dir / f"results_{report}_{store_code}.html").write_text(page.content(), encoding="utf-8")
 
