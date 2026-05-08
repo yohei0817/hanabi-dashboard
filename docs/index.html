@@ -137,6 +137,7 @@
     <button class="tab-btn" data-tab="sales">売上・予算</button>
     <button class="tab-btn" data-tab="visits">来客分析</button>
     <button class="tab-btn" data-tab="staff">スタッフ実績</button>
+    <button class="tab-btn" data-tab="menu">メニュー別</button>
     <button class="tab-btn" data-tab="recruit">採用 <span class="text-[11px] text-gray-400 ml-0.5">(準備中)</span></button>
   </div>
 </nav>
@@ -224,7 +225,43 @@
     <div class="space-y-4" id="staffRankings"></div>
   </div>
 
-  <!-- =========== Tab 5: 採用 (placeholder) =========== -->
+  <!-- =========== Tab 5: メニュー別 =========== -->
+  <div class="tab-panel" data-panel="menu">
+    <div class="mb-4">
+      <h2 class="text-2xl font-bold">メニュー別実績</h2>
+      <div class="text-sm text-gray-500 mt-1">商品単位の出数・売上・前年比 (情報分析→技術の実績ページから取得)</div>
+    </div>
+    <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
+      <span class="text-xs text-gray-500">期間</span>
+      <select id="menuPeriodSel" class="border border-gray-300 rounded px-2 py-1 text-sm"></select>
+      <span class="text-xs text-gray-500 ml-3">店舗</span>
+      <select id="menuStoreSel" class="border border-gray-300 rounded px-2 py-1 text-sm">
+        <option value="all">全社合算</option>
+        <option value="tsunashima">Hanabi 綱島店</option>
+        <option value="miyakojima">ELLE by Hanabi 宮古島店</option>
+      </select>
+      <span class="text-xs text-gray-500 ml-3">並び</span>
+      <select id="menuSortSel" class="border border-gray-300 rounded px-2 py-1 text-sm">
+        <option value="total_price">売上</option>
+        <option value="count">数量</option>
+        <option value="year_on_year_price">前年比</option>
+        <option value="unit_price">平均単価</option>
+      </select>
+      <span class="ml-auto text-[11px] text-gray-400" id="menuStatus"></span>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-3 mb-4">
+      <div class="card p-4">
+        <div class="text-xs font-semibold text-gray-500 mb-2">カテゴリ別 売上構成</div>
+        <div id="menuCategoryBreakdown" class="space-y-2"></div>
+      </div>
+      <div class="card p-4 lg:col-span-2 overflow-x-auto">
+        <div class="text-xs font-semibold text-gray-500 mb-2">商品別 ランキング (上位30)</div>
+        <div id="menuRankingTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========== Tab 6: 採用 (placeholder) =========== -->
   <div class="tab-panel" data-panel="recruit">
     <div class="mb-4">
       <h2 class="text-2xl font-bold">採用 <span class="text-sm text-gray-500 font-normal ml-2">Phase 2 で実装予定</span></h2>
@@ -415,6 +452,7 @@ function render(month) {
   renderRealtimeBanner();
   renderTopKpi();
   renderFyProgress();
+  renderMenuTab();
   renderStatusPanel();
   renderStoreCompare();
   renderDeptBreakdownSummary();
@@ -451,7 +489,7 @@ function renderTopKpi() {
       bar: { val: monthPct, color: pctColor(monthPct) }
     },
     {
-      title: "着地予測",
+      title: "月末着地予測",
       main: fmt(projection),
       sub: `<span class="${pctClass(projPct)} font-semibold">${projPct.toFixed(1)}%</span> <span class="${projDelta>=0?'pct-good':'pct-bad'} ml-1">${projDelta>=0?'▲':'▼'} ${fmt(Math.abs(projDelta))}</span>`,
     },
@@ -486,6 +524,134 @@ function renderTopKpi() {
       ${c.bar ? `<div class="progress-track mt-2"><div class="progress-fill" style="width:${Math.min(100,c.bar.val)}%; background:${c.bar.color}"></div></div>` : ""}
     </div>
   `).join("");
+}
+
+function renderMenuTab() {
+  const periodSel = document.getElementById("menuPeriodSel");
+  const storeSel = document.getElementById("menuStoreSel");
+  const sortSel = document.getElementById("menuSortSel");
+  if (!periodSel) return;
+  const menuData = DATA.menu_data || {};
+  const labels = Object.keys(menuData).sort();
+  if (!labels.length) {
+    document.getElementById("menuStatus").textContent = "データなし。scripts/scrape_menu.py を実行してください";
+    return;
+  }
+  // Populate period dropdown if empty
+  if (!periodSel.children.length) {
+    labels.forEach(l => {
+      const o = document.createElement("option");
+      o.value = l; o.textContent = l;
+      periodSel.appendChild(o);
+    });
+    periodSel.value = labels[labels.length - 1];  // default to latest
+    [periodSel, storeSel, sortSel].forEach(s => s.addEventListener("change", drawMenu));
+  }
+  drawMenu();
+}
+
+function drawMenu() {
+  const period = document.getElementById("menuPeriodSel").value;
+  const store = document.getElementById("menuStoreSel").value;
+  const sortKey = document.getElementById("menuSortSel").value;
+  const menuData = DATA.menu_data || {};
+  const periodData = menuData[period] || {};
+  // Aggregate rows
+  let rows = [];
+  if (store === "all") {
+    // Merge tsunashima + miyakojima by commodity_name
+    const merged = {};
+    for (const sid of ["tsunashima", "miyakojima"]) {
+      for (const r of (periodData[sid] || [])) {
+        const key = r.category_status_name + "::" + r.commodity_name;
+        if (!merged[key]) {
+          merged[key] = { ...r, count: 0, total_price: 0, prev_total_price: 0 };
+        }
+        merged[key].count = (parseInt(merged[key].count) || 0) + (parseInt(r.count) || 0);
+        merged[key].total_price = (parseInt(merged[key].total_price) || 0) + (parseInt(r.total_price) || 0);
+        merged[key].prev_total_price = (parseInt(merged[key].prev_total_price) || 0) + (parseInt(r.prev_total_price) || 0);
+      }
+    }
+    rows = Object.values(merged);
+    // Recalculate unit_price, year_on_year
+    for (const r of rows) {
+      r.unit_price = r.count ? Math.round(r.total_price / r.count) : 0;
+      r.year_on_year_price = r.prev_total_price ? (r.total_price / r.prev_total_price * 100).toFixed(1) + "%" : "—";
+    }
+  } else {
+    rows = (periodData[store] || []).map(r => ({...r}));
+  }
+  // Filter zeros (count and total_price both 0)
+  const validRows = rows.filter(r => parseInt(r.count) > 0 || parseInt(r.total_price) > 0);
+  // Sort
+  const sortFn = sortKey === "year_on_year_price"
+    ? (a, b) => (parseFloat(b.year_on_year_price) || 0) - (parseFloat(a.year_on_year_price) || 0)
+    : (a, b) => (parseInt(b[sortKey]) || 0) - (parseInt(a[sortKey]) || 0);
+  validRows.sort(sortFn);
+
+  // Status bar
+  document.getElementById("menuStatus").textContent = `${validRows.length}商品 / 期間 ${period}`;
+
+  // Category breakdown
+  const catTotals = {};
+  let grand = 0;
+  for (const r of rows) {
+    const cat = r.category_status_name || "未分類";
+    const v = parseInt(r.total_price) || 0;
+    catTotals[cat] = (catTotals[cat] || 0) + v;
+    grand += v;
+  }
+  const sortedCats = Object.entries(catTotals).filter(([_, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const catColors = ["#1E88E5","#E91E63","#F59E0B","#43A047","#8E24AA","#FF6B35","#29B6F6","#9CA3AF"];
+  document.getElementById("menuCategoryBreakdown").innerHTML = sortedCats.map(([cat, v], i) => {
+    const w = grand ? (v/grand*100).toFixed(1) : 0;
+    const c = catColors[i % catColors.length];
+    return `<div>
+      <div class="flex items-center text-xs">
+        <span class="w-3 h-3 rounded mr-2" style="background:${c}"></span>
+        <span class="flex-1 truncate">${cat}</span>
+        <span class="kpi-num font-semibold">${fmt(v)}</span>
+        <span class="text-[11px] text-gray-400 ml-2 w-12 text-right">${w}%</span>
+      </div>
+      <div class="progress-track mt-1"><div class="progress-fill" style="width:${w}%; background:${c}"></div></div>
+    </div>`;
+  }).join("");
+
+  // Top 30 ranking
+  const top30 = validRows.slice(0, 30);
+  const tbl = `
+    <table class="w-full text-sm" style="min-width:680px">
+      <thead class="text-[11px] text-gray-500 border-b border-gray-100">
+        <tr>
+          <th class="text-left py-1.5 pr-2 w-8">#</th>
+          <th class="text-left py-1.5 pr-2">カテゴリ</th>
+          <th class="text-left py-1.5 pr-2">商品</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='count'?'font-bold text-gray-900':''}">数量</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='total_price'?'font-bold text-gray-900':''}">売上</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='unit_price'?'font-bold text-gray-900':''}">平均単価</th>
+          <th class="text-right py-1.5 px-2 whitespace-nowrap ${sortKey==='year_on_year_price'?'font-bold text-gray-900':''}">前年比</th>
+          <th class="text-right py-1.5 pl-2 whitespace-nowrap">前年売上</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${top30.map((r, i) => {
+          const yoy = r.year_on_year_price || "—";
+          const yoyVal = parseFloat(yoy) || 0;
+          const yoyCls = yoyVal === 0 || yoy === "—" ? "text-gray-400" : yoyVal >= 100 ? "pct-good" : "pct-bad";
+          return `<tr class="border-b border-gray-50 hover:bg-gray-50">
+            <td class="py-1.5 pr-2 rank-num text-center">${i+1}</td>
+            <td class="py-1.5 pr-2 text-[11px] text-gray-500">${r.category_status_name || ""}</td>
+            <td class="py-1.5 pr-2 truncate" style="max-width:200px">${r.commodity_name || ""}</td>
+            <td class="py-1.5 px-2 text-right kpi-num font-semibold">${fmtN(r.count)}</td>
+            <td class="py-1.5 px-2 text-right kpi-num font-semibold">${fmt(r.total_price)}</td>
+            <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${fmt(r.unit_price)}</td>
+            <td class="py-1.5 px-2 text-right kpi-num font-semibold ${yoyCls}">${yoy}</td>
+            <td class="py-1.5 pl-2 text-right kpi-num text-gray-500">${fmt(r.prev_total_price)}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
+  document.getElementById("menuRankingTable").innerHTML = tbl;
 }
 
 function renderRealtimeBanner() {
@@ -817,7 +983,7 @@ function renderStoreCompare() {
               <div class="kpi-num font-semibold">${fmt(r.customers ? Math.round(r.sales/r.customers) : 0)}</div>
             </div>
             <div>
-              <div class="text-gray-500">着地予測</div>
+              <div class="text-gray-500">月末着地予測</div>
               <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
             </div>
           </div>
@@ -983,7 +1149,7 @@ function renderSalesTab() {
             <div class="progress-track mb-2"><div class="progress-fill" style="width:${w}%; background:${pctColor(monthPctV)}"></div><div class="progress-pace" style="left:${paceW}%"></div></div>
             <div class="grid grid-cols-3 gap-2 text-xs mt-3 pt-3 border-t border-gray-100">
               <div>
-                <div class="text-gray-500">着地予測</div>
+                <div class="text-gray-500">月末着地予測</div>
                 <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
                 <div class="text-[11px] text-gray-400">${projection ? (projDelta>=0?'+':'')+fmt(projDelta) : ""}</div>
               </div>

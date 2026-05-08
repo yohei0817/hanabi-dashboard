@@ -330,6 +330,18 @@ def main():
         except Exception:
             pass
 
+    # Load menu_*.json files (scraped from 情報分析→技術の実績画面)
+    menu_data = {}  # { label: { store_id: rows } }
+    for p in DATA.glob("menu_*.json"):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+            label = d.get("label")
+            sid = d.get("store_id")
+            if label and sid:
+                menu_data.setdefault(label, {})[sid] = d.get("rows", [])
+        except Exception as e:
+            print(f"  warn: failed to load {p.name}: {e}")
+
     out = {
         "generated_at": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
         "stores": STORES,
@@ -345,6 +357,7 @@ def main():
         "target_by_store": target_by_store,
         "days_in_month": {m: days_in_month(m) for m in months} if months else {},
         "uregi_top_snapshot": snapshot,
+        "menu_data": menu_data,
     }
 
     out_path = DOCS / "data.json"
