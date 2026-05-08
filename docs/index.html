@@ -25,13 +25,14 @@
     --elle-purple: #6E5BA8; --elle-pink: #D63384;
     --dept-hair: #E91E63; --dept-eye: #1E88E5; --dept-nail: #F59E0B;
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", system-ui, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
   .brand-header-dark { background: #0A0A0A; }
   .brand-logo { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: 0.18em; font-weight: 300; }
   .firework-gradient { background: linear-gradient(90deg, #E53935 0%, #FF6B35 14%, #FFC107 28%, #43A047 42%, #29B6F6 56%, #1E88E5 70%, #8E24AA 84%, #E91E63 100%); }
   .elle-gradient { background: linear-gradient(135deg, #6E5BA8 0%, #D63384 100%); }
   .hanabi-gradient { background: linear-gradient(135deg, #000 0%, #1a0d2e 35%, #3d1845 70%, #5a1f4a 100%); }
-  .kpi-num { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
+  .kpi-num { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   .pct-good { color: var(--accent-green); }
   .pct-warn { color: var(--accent-yellow); }
   .pct-bad  { color: var(--accent-red); }
@@ -108,7 +109,7 @@
       <button type="submit" class="w-full rounded-lg py-2.5 px-4 text-sm font-semibold mt-2 hover:opacity-90" style="background:#fff; color:#0A0A0A">ログイン</button>
     </form>
     <div class="firework-gradient h-0.5 mt-7 rounded-full opacity-60"></div>
-    <div class="text-[10px] text-gray-500 mt-3 text-center">一度ログインすると24時間有効</div>
+    <div class="text-[11px] text-gray-500 mt-3 text-center">一度ログインすると24時間有効</div>
   </div>
 </div>
 
@@ -117,10 +118,10 @@
   <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <img src="assets/hanabi-logo.png" alt="HANABI" class="h-9 w-auto" />
-      <span class="text-[10px] text-gray-500 tracking-[0.2em] font-light ml-1 hidden sm:inline">DASHBOARD</span>
+      <span class="text-[11px] text-gray-500 tracking-[0.2em] font-light ml-1 hidden sm:inline">DASHBOARD</span>
     </div>
     <div class="flex items-center gap-3">
-      <span class="text-[10px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
+      <span class="text-[11px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
       <select id="monthSelect" class="bg-gray-900 border border-gray-700 rounded px-2.5 py-1 text-sm"></select>
       <span id="roleBadge" class="text-xs px-2 py-0.5 rounded border border-gray-600 text-gray-300">…</span>
       <button id="logoutBtn" class="text-xs text-gray-400 hover:text-white">切替</button>
@@ -136,7 +137,7 @@
     <button class="tab-btn" data-tab="sales">売上・予算</button>
     <button class="tab-btn" data-tab="visits">来客分析</button>
     <button class="tab-btn" data-tab="staff">スタッフ実績</button>
-    <button class="tab-btn" data-tab="recruit">採用 <span class="text-[10px] text-gray-400 ml-0.5">(準備中)</span></button>
+    <button class="tab-btn" data-tab="recruit">採用 <span class="text-[11px] text-gray-400 ml-0.5">(準備中)</span></button>
   </div>
 </nav>
 
@@ -556,13 +557,13 @@ function renderStoreCompare() {
         <div class="mb-4">
           <div class="flex items-baseline justify-between mb-1.5">
             <div class="text-xs font-semibold text-gray-500">売上内訳</div>
-            <div class="text-[10px] text-gray-400">店販比率 ${shopRate}%</div>
+            <div class="text-[11px] text-gray-400">店販比率 ${shopRate}%</div>
           </div>
           <div class="flex h-5 rounded overflow-hidden">
-            <div style="width:${techRate}%; background:#1E88E5" class="flex items-center justify-center text-[10px] text-white font-semibold">技術 ${techRate}%</div>
-            <div style="width:${shopRate}%; background:#43A047" class="flex items-center justify-center text-[10px] text-white font-semibold">${shopRate >= 8 ? '店販' : ''}</div>
+            <div style="width:${techRate}%; background:#1E88E5" class="flex items-center justify-center text-[11px] text-white font-semibold">技術 ${techRate}%</div>
+            <div style="width:${shopRate}%; background:#43A047" class="flex items-center justify-center text-[11px] text-white font-semibold">${shopRate >= 8 ? '店販' : ''}</div>
           </div>
-          <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+          <div class="flex justify-between text-[11px] text-gray-500 mt-1">
             <span>技術 ${fmt(ms.tech_sales)}</span>
             <span>店販 ${fmt(ms.shop_sales)}</span>
           </div>
@@ -576,11 +577,11 @@ function renderStoreCompare() {
           <div class="flex items-center text-xs gap-3">
             <div class="flex-1">
               <div class="text-gray-500">指名</div>
-              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_nominated)}<span class="text-gray-400 text-[10px]">客</span> · ${fmt(ms.tech_sales_nominated)}</div>
+              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_nominated)}<span class="text-gray-400 text-[11px]">客</span> · ${fmt(ms.tech_sales_nominated)}</div>
             </div>
             <div class="flex-1">
               <div class="text-gray-500">フリー</div>
-              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_free)}<span class="text-gray-400 text-[10px]">客</span> · ${fmt(ms.tech_sales_free)}</div>
+              <div class="kpi-num font-semibold">${fmtN(ms.tech_customers_free)}<span class="text-gray-400 text-[11px]">客</span> · ${fmt(ms.tech_sales_free)}</div>
             </div>
           </div>
         </div>
@@ -624,15 +625,15 @@ function renderStoreCompare() {
                 <div class="flex items-center gap-2">
                   <span class="w-1.5 h-5 rounded" style="background:${color}"></span>
                   <span class="text-sm font-semibold">${d}</span>
-                  <span class="badge ${badgeCls(dPacePct)} text-[10px]">進捗 ${monthly ? dPacePct.toFixed(0)+'%' : '—'}</span>
+                  <span class="badge ${badgeCls(dPacePct)} text-[11px]">進捗 ${monthly ? dPacePct.toFixed(0)+'%' : '—'}</span>
                 </div>
                 <div class="text-right">
                   <div class="kpi-num text-sm font-bold">${fmt(sales)}</div>
-                  <div class="text-[10px] text-gray-500">/ ${fmt(monthly)}</div>
+                  <div class="text-[11px] text-gray-500">/ ${fmt(monthly)}</div>
                 </div>
               </div>
               <div class="progress-track"><div class="progress-fill" style="width:${compW}%; background:${color}"></div></div>
-              <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+              <div class="flex justify-between text-[11px] text-gray-500 mt-1">
                 <span>構成比 ${compW}%</span>
                 <span>月末予測 <span class="kpi-num font-semibold ${dProjDelta>=0?'pct-good':'pct-bad'}">${dProjection?fmtM(dProjection):'—'} (${dProjDelta>=0?'+':''}${fmtN(dProjDelta)})</span></span>
               </div>
@@ -728,11 +729,11 @@ function renderDeptBreakdownSummary() {
             <div class="flex items-center gap-2">
               <span class="w-2 h-7 rounded" style="background:${color}"></span>
               <span class="text-sm font-bold">${d}</span>
-              <span class="badge ${badgeCls(pacePct)} text-[10px]">進捗 ${monthly ? pacePct.toFixed(0)+'%' : '—'}</span>
+              <span class="badge ${badgeCls(pacePct)} text-[11px]">進捗 ${monthly ? pacePct.toFixed(0)+'%' : '—'}</span>
             </div>
             <div class="text-right">
               <div class="kpi-num text-lg font-bold">${fmt(sales)}</div>
-              <div class="text-[10px] text-gray-500">/ 月予算 ${fmt(Math.round(monthly))}</div>
+              <div class="text-[11px] text-gray-500">/ 月予算 ${fmt(Math.round(monthly))}</div>
             </div>
           </div>
           <div class="progress-track"><div class="progress-fill" style="width:${w}%; background:${color}"></div><div class="progress-pace" style="left:${paceW}%"></div></div>
@@ -744,7 +745,7 @@ function renderDeptBreakdownSummary() {
             <div>
               <div class="text-gray-400">月末着地予測</div>
               <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? fmtM(projection) : '—'}</div>
-              <div class="text-[10px] ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? (projDelta>=0?'+':'')+fmtN(projDelta) : ''}</div>
+              <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? (projDelta>=0?'+':'')+fmtN(projDelta) : ''}</div>
             </div>
             <div>
               <div class="text-gray-400">構成比</div>
@@ -785,14 +786,14 @@ function renderVisitDonut() {
         ${s.vis && s.vis.customers ? `
           <div style="height:140px; position:relative;"><canvas id="vDonut_${s.id}"></canvas></div>
           <div class="text-center mt-2">
-            <div class="text-[10px] text-gray-500">リピート率</div>
+            <div class="text-[11px] text-gray-500">リピート率</div>
             <div class="text-lg font-bold pct-good kpi-num">${(s.vis.repeat/s.vis.customers*100).toFixed(1)}%</div>
           </div>
           <div class="grid grid-cols-2 gap-1 text-[11px] mt-1.5 pt-1.5 border-t border-gray-100">
             <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:#1E88E5"></span><span class="text-gray-500">リピート</span><span class="kpi-num ml-auto font-semibold">${fmtN(s.vis.repeat)}</span></div>
             <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:#FF6B35"></span><span class="text-gray-500">新規</span><span class="kpi-num ml-auto font-semibold">${fmtN(s.vis.new)}</span></div>
           </div>
-          <div class="text-[10px] text-gray-400 mt-1">合計 ${fmtN(s.vis.customers)}客</div>
+          <div class="text-[11px] text-gray-400 mt-1">合計 ${fmtN(s.vis.customers)}客</div>
         ` : `<div class="text-center text-xs text-gray-400 py-8">日別CSV未提供</div>`}
       </div>
     </div>
@@ -839,17 +840,17 @@ function renderSalesTab() {
               <div>
                 <div class="text-gray-500">着地予測</div>
                 <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
-                <div class="text-[10px] text-gray-400">${projection ? (projDelta>=0?'+':'')+fmt(projDelta) : ""}</div>
+                <div class="text-[11px] text-gray-400">${projection ? (projDelta>=0?'+':'')+fmt(projDelta) : ""}</div>
               </div>
               <div>
                 <div class="text-gray-500">残目標</div>
                 <div class="kpi-num font-semibold">${fmtM(remainTarget)}</div>
-                <div class="text-[10px] text-gray-400">残${remainDays}日</div>
+                <div class="text-[11px] text-gray-400">残${remainDays}日</div>
               </div>
               <div>
                 <div class="text-gray-500">必要日商</div>
                 <div class="kpi-num font-semibold">${fmt(remainDays && remainTarget ? Math.round(remainTarget/remainDays) : 0)}</div>
-                <div class="text-[10px] text-gray-400">/日</div>
+                <div class="text-[11px] text-gray-400">/日</div>
               </div>
             </div>
           </div>
@@ -929,7 +930,7 @@ function renderDeptBudgetTable() {
       <td class="text-right py-3 px-3 kpi-num font-semibold ${pctClass(pacePctV)}">${pacePctV.toFixed(1)}%</td>
       <td class="text-right py-3 px-3">
         <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
-        <div class="text-[10px] ${projDelta>=0?'pct-good':'pct-bad'}">${projDelta>=0?'+':''}${fmtN(projDelta)}</div>
+        <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projDelta>=0?'+':''}${fmtN(projDelta)}</div>
       </td>
       <td class="text-right py-3 pl-3 kpi-num text-gray-500">${share}</td>
     </tr>`;
@@ -1165,7 +1166,7 @@ function rankTable(rows, sortKey) {
               <span class="truncate">${s.name}</span>
             </div>
           </td>
-          <td class="py-2 pr-2"><span class="badge text-[10px]" style="background:${deptColor}22; color:${deptColor}; border:1px solid ${deptColor}50">${s.primary_dept}</span></td>
+          <td class="py-2 pr-2"><span class="badge text-[11px]" style="background:${deptColor}22; color:${deptColor}; border:1px solid ${deptColor}50">${s.primary_dept}</span></td>
           ${cell('total_sales')}
           ${cell('tech_sales')}
           ${cell('tech_sales_nominated')}
