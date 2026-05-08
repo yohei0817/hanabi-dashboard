@@ -91,16 +91,31 @@
 
 <!-- Login overlay -->
 <div id="loginOverlay" class="login-overlay">
-  <div class="card max-w-sm w-full mx-4 p-8 text-center">
-    <div class="brand-logo text-3xl mb-2">Hanabi</div>
-    <div class="text-xs tracking-widest text-gray-400 mb-6">DASHBOARD</div>
-    <div class="text-sm text-gray-300 mb-3">アカウントを選択</div>
-    <div class="grid gap-2">
-      <button class="loginBtn rounded-lg py-3 px-4 text-sm font-medium hover:opacity-90" style="background:var(--accent-green); color:#0A1612" data-role="admin">本部 (admin)</button>
-      <button class="loginBtn rounded-lg py-3 px-4 text-sm font-medium hover:opacity-90" style="background:#374151; color:#fff" data-role="manager">店長</button>
-      <button class="loginBtn rounded-lg py-3 px-4 text-sm font-medium hover:opacity-90" style="background:#1F2937; color:#fff" data-role="staff">スタッフ</button>
+  <div class="card max-w-sm w-full mx-4 p-8">
+    <div class="text-center mb-6">
+      <div class="flex items-center justify-center gap-1.5 mb-2">
+        <span class="firework-dot" style="background:#E53935"></span>
+        <span class="firework-dot" style="background:#FFC107"></span>
+        <span class="firework-dot" style="background:#43A047"></span>
+        <span class="firework-dot" style="background:#1E88E5"></span>
+        <span class="firework-dot" style="background:#8E24AA"></span>
+      </div>
+      <div class="brand-logo text-3xl mb-1">Hanabi</div>
+      <div class="text-xs tracking-widest text-gray-400">DASHBOARD</div>
     </div>
-    <div class="text-xs text-gray-500 mt-6">※ パスワード認証は後ほど追加予定</div>
+    <form id="loginForm" class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">ID</label>
+        <input type="text" id="loginId" autocomplete="username" autofocus class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">パスワード</label>
+        <input type="password" id="loginPw" autocomplete="current-password" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+      </div>
+      <div id="loginError" class="text-xs text-red-600 hidden">IDまたはパスワードが違います</div>
+      <button type="submit" class="w-full rounded-lg py-2.5 px-4 bg-black text-white text-sm font-semibold hover:opacity-90">ログイン</button>
+    </form>
+    <div class="text-[10px] text-gray-400 mt-6 text-center">※ 一度ログインすると24時間有効</div>
   </div>
 </div>
 
@@ -242,18 +257,64 @@ const pctClass = p => p >= 100 ? "pct-good" : p >= 80 ? "pct-warn" : "pct-bad";
 const pctColor = p => p >= 100 ? "var(--accent-green)" : p >= 80 ? "var(--accent-yellow)" : "var(--accent-red)";
 const badgeCls = p => p >= 100 ? "badge-good" : p >= 80 ? "badge-warn" : "badge-bad";
 
-// === Login ===
+// === Login (SHA-256 + 24h expiry) ===
+// Hashes computed from "id:password"
+const AUTH_HASHES = {
+  master: "2afc67bbfa48c93bd10514e44279a6d0e24acc2db5bdcd3d8f4557acada45faa",
+  admin:  "31cf95cae918031849ac1e9c838427059312b3ab8112a27b54d86116cc8fba10",
+};
+const ROLE_LABEL = { master: "本部", admin: "管理者" };
+const SESSION_HOURS = 24;
+
 const overlay = document.getElementById("loginOverlay");
 const roleBadge = document.getElementById("roleBadge");
-function setRole(r){
-  localStorage.setItem("hanabi_role", r);
-  roleBadge.textContent = ({admin:"本部", manager:"店長", staff:"スタッフ"})[r] || r;
-  overlay.classList.add("hidden");
+
+async function sha256Hex(text) {
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
 }
-document.querySelectorAll(".loginBtn").forEach(b => b.addEventListener("click", () => setRole(b.dataset.role)));
-document.getElementById("logoutBtn").addEventListener("click", () => { localStorage.removeItem("hanabi_role"); overlay.classList.remove("hidden"); });
-const savedRole = localStorage.getItem("hanabi_role");
-if (savedRole) setRole(savedRole);
+
+function setAuthenticated(role) {
+  const session = { role, expires: Date.now() + SESSION_HOURS * 3600 * 1000 };
+  localStorage.setItem("hanabi_session", JSON.stringify(session));
+  roleBadge.textContent = ROLE_LABEL[role] || role;
+  overlay.classList.add("hidden");
+  loadData();
+}
+
+function isSessionValid() {
+  try {
+    const s = JSON.parse(localStorage.getItem("hanabi_session") || "null");
+    return s && s.expires > Date.now() ? s : null;
+  } catch { return null; }
+}
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const id = document.getElementById("loginId").value.trim();
+  const pw = document.getElementById("loginPw").value;
+  const err = document.getElementById("loginError");
+  if (!id || !pw) { err.classList.remove("hidden"); return; }
+  const hash = await sha256Hex(`${id}:${pw}`);
+  const role = Object.keys(AUTH_HASHES).find(r => AUTH_HASHES[r] === hash);
+  if (role) {
+    err.classList.add("hidden");
+    document.getElementById("loginPw").value = "";
+    setAuthenticated(role);
+  } else {
+    err.classList.remove("hidden");
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  localStorage.removeItem("hanabi_session");
+  overlay.classList.remove("hidden");
+  document.getElementById("loginId").focus();
+});
+
+const savedSession = isSessionValid();
+if (savedSession) setAuthenticated(savedSession.role);
 
 // === Tabs ===
 function activateTab(tabName) {
@@ -264,12 +325,16 @@ function activateTab(tabName) {
 }
 document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => activateTab(b.dataset.tab)));
 
-let DATA = null, currentMonth = null, SCOPE = null;
-Chart.defaults.color = "#94A6A0";
-Chart.defaults.borderColor = "#243530";
+let DATA = null, currentMonth = null, SCOPE = null, _dataLoaded = false;
+Chart.defaults.color = "#6B7280";
+Chart.defaults.borderColor = "#E5E7EB";
 Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", system-ui';
 
-fetch("data.json").then(r => r.json()).then(d => {
+async function loadData() {
+  if (_dataLoaded) return;
+  _dataLoaded = true;
+  const r = await fetch("data.json");
+  const d = await r.json();
   DATA = d;
   document.getElementById("generatedAt").textContent = "generated " + d.generated_at;
   const ms = document.getElementById("monthSelect");
@@ -283,7 +348,7 @@ fetch("data.json").then(r => r.json()).then(d => {
   render(d.latest_month);
   const savedTab = localStorage.getItem("hanabi_tab") || "summary";
   activateTab(savedTab);
-});
+}
 
 function computeScope(month) {
   const stores = DATA.stores;
