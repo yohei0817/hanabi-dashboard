@@ -153,6 +153,9 @@
     <!-- Top KPI row (6 cards) -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5" id="topKpi"></div>
 
+    <!-- FY26 progress (vs budget + vs FY25) -->
+    <div class="grid md:grid-cols-3 gap-3 mb-5" id="fyProgressCards"></div>
+
     <!-- Status panel + Monthly trend -->
     <div class="grid lg:grid-cols-5 gap-4 mb-5">
       <div class="card p-5 lg:col-span-2">
@@ -407,6 +410,7 @@ function render(month) {
   document.getElementById("summarySubtitle").innerHTML = `全社 / ${ymLabel} ${SCOPE.globalElapsedDays}日経過 (${SCOPE.daysInMonth}日中) <span class="text-gray-400">·</span> <span class="text-gray-500">数値はすべて税抜</span>`;
 
   renderTopKpi();
+  renderFyProgress();
   renderStatusPanel();
   renderStoreCompare();
   renderDeptBreakdownSummary();
@@ -478,6 +482,70 @@ function renderTopKpi() {
       ${c.bar ? `<div class="progress-track mt-2"><div class="progress-fill" style="width:${Math.min(100,c.bar.val)}%; background:${c.bar.color}"></div></div>` : ""}
     </div>
   `).join("");
+}
+
+function renderFyProgress() {
+  const root = document.getElementById("fyProgressCards");
+  if (!root) return;
+  const fy26Months = ["202605","202606","202607","202608","202609","202610","202611","202612","202701","202702","202703","202704"];
+  const fy25Months = ["202505","202506","202507","202508","202509","202510","202511","202512","202601","202602","202603","202604"];
+  const salesFor = (sid, ym) => {
+    const ds = (DATA.daily_by_store[sid] || {})[ym] || [];
+    const s = ds.reduce((a,d) => a + d.sales, 0);
+    if (s > 0) return s;
+    const ms = (DATA.monthly_by_store[sid] || {})[ym];
+    return ms ? ms.total_sales : 0;
+  };
+  const sumFY = (months, sid) => months.reduce((a, m) => a + salesFor(sid, m), 0);
+  const fy26Total = sumFY(fy26Months, "tsunashima") + sumFY(fy26Months, "miyakojima");
+  const fy25Total = sumFY(fy25Months, "tsunashima") + sumFY(fy25Months, "miyakojima");
+  const fy26Budget = ((DATA.budgets || {}).annual || {}).company || 0;
+
+  // Months elapsed in FY26 (count months that have actual data)
+  let monthsElapsed = 0;
+  for (const m of fy26Months) {
+    const actual = salesFor("tsunashima", m) + salesFor("miyakojima", m);
+    if (actual > 0) monthsElapsed++;
+    else break;
+  }
+  // For currently-in-progress month, we have partial data — use ratio
+  const dailyElapsedFraction = SCOPE.globalElapsedDays / SCOPE.daysInMonth;
+  const monthsEffective = monthsElapsed - 1 + dailyElapsedFraction;  // last month is partial
+  const annualProjection = monthsEffective > 0 ? Math.round(fy26Total / monthsEffective * 12) : 0;
+  const annualBudgetPct = fy26Budget ? (fy26Total / fy26Budget * 100) : 0;
+  const annualProjPct = fy26Budget ? (annualProjection / fy26Budget * 100) : 0;
+  // FY25 same period (months elapsed worth in FY25)
+  const fy25SamePeriod = fy25Months.slice(0, monthsElapsed - 1).reduce((a, m) => a + salesFor("tsunashima", m) + salesFor("miyakojima", m), 0)
+    + (fy25Months[monthsElapsed - 1] ? (salesFor("tsunashima", fy25Months[monthsElapsed - 1]) + salesFor("miyakojima", fy25Months[monthsElapsed - 1])) * dailyElapsedFraction : 0);
+  const yoyYtdPct = fy25SamePeriod ? (fy26Total / fy25SamePeriod * 100) : 0;
+
+  root.innerHTML = `
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">FY26 通期実績 (累計)</div>
+      <div class="text-2xl font-bold kpi-num">${fmt(fy26Total)}</div>
+      <div class="text-xs mt-1">
+        <span class="${pctClass(annualBudgetPct*12/Math.max(monthsEffective,1))} font-semibold">${annualBudgetPct.toFixed(2)}%</span>
+        <span class="text-gray-400">/ 年予算 ${fmtM(fy26Budget)}</span>
+      </div>
+      <div class="progress-track mt-2"><div class="progress-fill" style="width:${Math.min(100,annualBudgetPct)}%; background:${pctColor(annualBudgetPct*12/Math.max(monthsEffective,1))}"></div></div>
+      <div class="text-[11px] text-gray-500 mt-1">経過 ${monthsEffective.toFixed(1)}ヶ月</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">FY26 通期着地予測</div>
+      <div class="text-2xl font-bold kpi-num ${pctClass(annualProjPct)}">${annualProjection ? fmt(annualProjection) : "—"}</div>
+      <div class="text-xs mt-1">
+        <span class="${pctClass(annualProjPct)} font-semibold">${annualProjPct.toFixed(1)}%</span>
+        <span class="text-gray-400">vs 年予算</span>
+      </div>
+      <div class="text-[11px] text-gray-500 mt-2">${annualProjection >= fy26Budget ? "達成見込み" : `差 ${fmt(annualProjection - fy26Budget)}`}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">YTD前年同期比</div>
+      <div class="text-2xl font-bold kpi-num ${pctClass(yoyYtdPct)}">${fy25SamePeriod ? yoyYtdPct.toFixed(1) + "%" : "—"}</div>
+      <div class="text-xs mt-1 text-gray-500">FY25 同期 ${fmt(Math.round(fy25SamePeriod))}</div>
+      <div class="text-[11px] text-gray-500 mt-2">FY25 通期実績: ${fmt(fy25Total)}</div>
+    </div>
+  `;
 }
 
 function renderStatusPanel() {
