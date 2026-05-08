@@ -47,15 +47,24 @@ python3 -m http.server 8767 --directory docs
 3. `python3 scripts/generate.py` 実行
 4. プレビューで確認
 
-## Phase 2 残タスク
+## 完了タスク
 
-- [ ] Playwright 自動 DL (Uレジ → CSV → push)
-- [ ] launchd 毎朝起動
-- [ ] GitHub リポジトリ作成 + GitHub Pages 公開
-- [ ] 採用管理機能 (サロン版から移植)
-- [ ] パスワード認証
-- [ ] 公式ロゴ画像差し替え (現状: テキストロゴ)
-- [ ] FY25 月次推移データ追加 (前年同月比をより精緻に)
+- [x] Playwright 自動 DL (Uレジ → CSV → push) `scripts/auto_download.py`
+- [x] launchd 毎朝 8:15 JST 自動デプロイ `scripts/com.hanabi-board.daily.plist`
+- [x] GitHub リポジトリ + GitHub Pages 公開 `https://hanabi-board.github.io/hanabi-dashboard/`
+- [x] パスワード認証 (本部/管理者, SHA-256, 24h session)
+- [x] 採用管理機能 (本部のみ候補者追加・編集・削除モーダル + JSON出力)
+- [x] FY22-25 全月バックフィル `scripts/backfill.py YYYYMM YYYYMM`
+- [x] メニュー別実績スクレイプ `scripts/scrape_menu.py FY22 / FY25_MONTHLY` 等
+- [x] 異常検知アラートパネル (サマリータブ上部)
+- [x] 印刷ビュー (A4 1枚 サマリーレポート)
+
+## 残タスク
+
+- [ ] 伝票明細スクレイプ (取引粒度でリピート率分析)
+- [ ] FY22-24 メニュー別データ取得 (scrape_menu.py で `FY22`, `FY23`, `FY24` を実行)
+- [ ] 情報分析の他レポート (失客 / 年代別 / 曜日別 / Zチャート)
+- [ ] 男女別売上の時系列チャート
 
 ## 主要設計
 
@@ -63,11 +72,13 @@ python3 -m http.server 8767 --directory docs
 
 | タブ | 内容 |
 |---|---|
-| サマリー | 6 KPI + 状態パネル + 月次推移 + 店舗比較 + 部門別(宮古島) + 新規vsリピート店舗別donut |
+| サマリー | 6 KPI + 異常検知アラート + 状態パネル + 月次推移 + 店舗比較 + 部門別(宮古島) + 新規vsリピート店舗別donut |
 | 売上・予算 | 店舗カード(綱島/宮古島 月予算進捗) + 日別推移 + 部門別予算vs実績 |
-| 来客分析 | 来店種別 (店舗別) + 指名/フリー (店舗別) |
+| 来客分析 | 来店種別 + 指名・フリー + 男女別 + 月次推移チャート4種 (客数/リピート率/客単価/指名率) |
 | スタッフ実績 | 店舗別 1テーブル + 並び順セレクト |
-| 採用 | Phase 2 placeholder |
+| メニュー別実績 | 期間/並び/検索フィルタ + 5スコープ展開 |
+| 年度レポート | 任意のFYペアで通年比較 (FY22から) + 月次重ねチャート + 部門別 + メニューTOP10 |
+| 採用 | KPI + ファネル + ソース + 候補者リスト (本部は追加・編集・削除可) |
 
 ### 達成率の表記ルール
 
@@ -86,7 +97,8 @@ python3 -m http.server 8767 --directory docs
 
 - 部門別の新規/リピート区分は取れない (日別CSVは店舗単位までで部門breakdownなし)
 - 代替: 部門別 客数+客単価+指名率+構成比 を staff_ranking 集計から表示
-- 伝票明細CSVなし → リピート率分析等は不可
+- 伝票明細CSVなし → リピート率分析等は不可 (Playwright scrape は技術的に可能、未実装)
+- ELLE 宮古島店は 2025/9 OPEN のため FY25 の前半 (5月-8月) はデータなし。 同店舗 YoY 比較で除外
 
 ### 水野陽平の扱い
 
