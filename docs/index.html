@@ -1123,7 +1123,7 @@ function renderDeptBreakdownSummary() {
             <div>
               <div class="text-gray-400">月末着地予測</div>
               <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? fmtM(projection) : '—'}</div>
-              <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? (projDelta>=0?'+':'')+fmtN(projDelta) : ''}</div>
+              <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? (projDelta>=0 ? '▲ '+fmt(projDelta) : '▼ '+fmt(Math.abs(projDelta))) : ''}</div>
             </div>
             <div>
               <div class="text-gray-400">構成比</div>
@@ -1218,7 +1218,7 @@ function renderSalesTab() {
               <div>
                 <div class="text-gray-500">月末着地予測</div>
                 <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
-                <div class="text-[11px] text-gray-400">${projection ? (projDelta>=0?'+':'')+fmt(projDelta) : ""}</div>
+                <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projection ? (projDelta>=0 ? '▲ '+fmt(projDelta) : '▼ '+fmt(Math.abs(projDelta))) : ""}</div>
               </div>
               <div>
                 <div class="text-gray-500">残目標</div>
@@ -1308,7 +1308,7 @@ function renderDeptBudgetTable() {
       <td class="text-right py-3 px-3 kpi-num font-semibold ${pctClass(pacePctV)}">${pacePctV.toFixed(1)}%</td>
       <td class="text-right py-3 px-3">
         <div class="kpi-num font-semibold ${projDelta>=0?'pct-good':'pct-bad'}">${fmtM(projection)}</div>
-        <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projDelta>=0?'+':''}${fmtN(projDelta)}</div>
+        <div class="text-[11px] ${projDelta>=0?'pct-good':'pct-bad'}">${projDelta>=0 ? '▲ '+fmt(projDelta) : '▼ '+fmt(Math.abs(projDelta))}</div>
       </td>
       <td class="text-right py-3 pl-3 kpi-num text-gray-500">${share}</td>
     </tr>`;
