@@ -507,11 +507,19 @@ function renderTopKpi() {
         mainCls: pctClass(ssPct)
       };
     })(),
-    {
-      title: `直近の日次 (${lastDayLabel})`,
-      main: fmt(lastDaySales),
-      sub: lastDaySales ? "両店合算" : "—"
-    },
+    (function() {
+      // 指名率 KPI (HANABI重要指標 — リピート文化)
+      const nom = SCOPE.cMs.tech_customers_nominated || 0;
+      const free = SCOPE.cMs.tech_customers_free || 0;
+      const total = nom + free;
+      const rate = total ? (nom / total * 100) : 0;
+      return {
+        title: "指名率 (全社)",
+        main: total ? `${rate.toFixed(1)}%` : "—",
+        sub: total ? `指名 ${fmtN(nom)} / フリー ${fmtN(free)}` : "—",
+        mainCls: rate >= 60 ? "pct-good" : rate >= 40 ? "pct-warn" : "pct-bad"
+      };
+    })(),
   ];
 
   document.getElementById("topKpi").innerHTML = cards.map(c => `
@@ -552,13 +560,32 @@ function renderMenuTab() {
     document.getElementById("menuStatus").textContent = "データなし。scripts/scrape_menu.py を実行してください";
     return;
   }
+  const labelText = (l) => {
+    if (l === "FY25_annual") return "FY25 通年 (2025/5〜2026/4)";
+    if (l === "202605MTD") return "FY26 5月 (進行中)";
+    if (/^\d{6}$/.test(l)) {
+      const y = parseInt(l.slice(0,4),10);
+      const m = parseInt(l.slice(4,6),10);
+      const fy = m >= 5 ? (y - 2000) : (y - 2001);
+      return `${l.slice(0,4)}年${m}月 (FY${fy})`;
+    }
+    return l;
+  };
   if (!periodSel.children.length) {
-    labels.forEach(l => {
+    // Sort: FY25_annual first, then chronological
+    const sortedLabels = [...labels].sort((a,b) => {
+      if (a === "FY25_annual") return -1;
+      if (b === "FY25_annual") return 1;
+      if (a === "202605MTD") return 1;
+      if (b === "202605MTD") return -1;
+      return a.localeCompare(b);
+    });
+    sortedLabels.forEach(l => {
       const o = document.createElement("option");
-      o.value = l; o.textContent = l;
+      o.value = l; o.textContent = labelText(l);
       periodSel.appendChild(o);
     });
-    periodSel.value = "FY25_annual" in menuData ? "FY25_annual" : labels[labels.length - 1];
+    periodSel.value = "202605MTD" in menuData ? "202605MTD" : sortedLabels[sortedLabels.length - 1];
     [periodSel, sortSel].forEach(s => s.addEventListener("change", drawMenu));
   }
   drawMenu();
@@ -659,25 +686,37 @@ function drawMenu() {
   const mom_available = !!prevMonthOf(period);
   status.innerHTML = `期間 <strong>${period}</strong>${mom_available ? " · 前月比あり" : " · 前月比なし (annual/MTD)"}`;
 
-  root.innerHTML = scopes.map(sc => {
+  root.innerHTML = scopes.map((sc, i) => {
     const rows = getMenuRowsForScope(period, sc.sid, sc.dept);
     const totalSales = rows.reduce((a, r) => a + (parseInt(r.total_price) || 0), 0);
     const totalCount = rows.reduce((a, r) => a + (parseInt(r.count) || 0), 0);
+    const open = i === 0 ? "open" : "";  // expand first by default
     return `
-      <div class="card overflow-hidden">
-        <div class="${sc.headerCls} text-white px-4 py-3 flex items-center justify-between">
-          <div>
-            <div class="font-bold">${sc.title}</div>
-            <div class="text-xs opacity-80 mt-0.5">${sc.subtitle}</div>
+      <details ${open} class="card overflow-hidden">
+        <summary class="${sc.headerCls} text-white px-4 py-3 flex items-center justify-between cursor-pointer list-none">
+          <div class="flex items-center gap-2">
+            <span class="text-xs opacity-60 transition-transform" style="display:inline-block">▶</span>
+            <div>
+              <div class="font-bold">${sc.title}</div>
+              <div class="text-xs opacity-80 mt-0.5">${sc.subtitle}</div>
+            </div>
           </div>
           <div class="text-right">
             <div class="kpi-num text-base font-bold">${fmt(totalSales)}</div>
             <div class="text-[11px] opacity-80">${fmtN(totalCount)}件</div>
           </div>
-        </div>
+        </summary>
         <div class="p-4">${buildMenuTable(rows, sortKey, 20)}</div>
-      </div>`;
+      </details>`;
   }).join("");
+  // Rotate caret on open via CSS
+  document.querySelectorAll('#menuSections details').forEach(d => {
+    const arrow = d.querySelector('summary span');
+    if (!arrow) return;
+    const update = () => arrow.style.transform = d.open ? 'rotate(90deg)' : '';
+    update();
+    d.addEventListener('toggle', update);
+  });
 }
 
 function renderRealtimeBanner() {
@@ -791,7 +830,7 @@ function renderFyProgress() {
         <span class="text-gray-400">/ 年予算 ${fmtM(fy26Budget)}</span>
       </div>
       <div class="progress-track mt-2"><div class="progress-fill" style="width:${Math.min(100,annualBudgetPct)}%; background:${pctColor(annualBudgetPct*12/Math.max(monthsEffective,1))}"></div></div>
-      <div class="text-[11px] text-gray-500 mt-1">経過 ${monthsEffective.toFixed(1)}ヶ月</div>
+      <div class="text-[11px] text-gray-500 mt-1">${monthsEffective.toFixed(1)}ヶ月経過 / 12ヶ月</div>
     </div>
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">FY26 通期着地予測</div>
@@ -800,7 +839,7 @@ function renderFyProgress() {
         <span class="${pctClass(annualProjPct)} font-semibold">${annualProjPct.toFixed(1)}%</span>
         <span class="text-gray-400">vs 年予算</span>
       </div>
-      <div class="text-[11px] text-gray-500 mt-2">${annualProjection >= fy26Budget ? "達成見込み" : `差 ${fmt(annualProjection - fy26Budget)}`}</div>
+      <div class="text-[11px] mt-2 ${(annualProjection - fy26Budget) >= 0 ? 'pct-good' : 'pct-bad'} font-semibold">${annualProjection >= fy26Budget ? "達成見込み" : `▼ ${fmt(Math.abs(annualProjection - fy26Budget))}`}</div>
     </div>
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">YTD前年同期比</div>
@@ -841,7 +880,7 @@ function renderStatusPanel() {
     {
       type: ssPrev ? (yoyPct >= 100 ? "good" : "bad") : "info",
       title: ssPrev ? `${newStoreCount ? '前年同月比 (同店舗)' : '前年同月比'} ${yoyPct >= 100 ? "+" : ""}${(yoyPct-100).toFixed(1)}%` : "前年同月データなし",
-      sub: ssPrev ? `前年同月 ${fmt(ssPrev)} の進捗値 ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'+':''}${fmt(yoyDelta)}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "—",
+      sub: ssPrev ? `前年同月 ${fmt(ssPrev)} の進捗 ${fmt(yoyExpected)} に対し ${yoyDelta>=0?'▲ '+fmt(yoyDelta) : '▼ '+fmt(Math.abs(yoyDelta))}${newStoreCount ? ` · 新店${newStoreCount}店除外` : ""}` : "—",
     },
     {
       type: pacePct >= 90 ? "good" : pacePct >= 75 ? "warn" : "bad",
@@ -850,7 +889,7 @@ function renderStatusPanel() {
     },
     {
       type: projDelta >= 0 ? "good" : projDelta >= -t.target*0.05 ? "warn" : "bad",
-      title: `月末着地予測 ${fmt(projection)} (${projDelta>=0?'+':''}${fmt(projDelta)})`,
+      title: `月末着地予測 ${fmt(projection)} (${projDelta>=0?'▲ '+fmt(projDelta) : '▼ '+fmt(Math.abs(projDelta))})`,
       sub: `現ペース継続なら月末${projDelta>=0?'達成':'未達'}予想`,
     },
     {
@@ -1642,10 +1681,10 @@ function drawVisitDonut() {
     window["_chartVD_" + s.id] = new Chart(el.getContext("2d"), {
       type: "doughnut",
       data: {
-        labels: ["リピート", "新規", "紹介"],
+        labels: ["リピート", "新規"],
         datasets: [{
-          data: [s.vis.repeat, s.vis.new, s.vis.referral],
-          backgroundColor: ["#1E88E5", "#FF6B35", "#43A047"],
+          data: [s.vis.repeat, s.vis.new],
+          backgroundColor: ["#1E88E5", "#FF6B35"],
           borderWidth: 0,
         }]
       },
