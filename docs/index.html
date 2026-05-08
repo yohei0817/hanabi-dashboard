@@ -1073,11 +1073,16 @@ function drawDailySalesChart(month) {
   for (const sid of Object.keys(DATA.daily_by_store)) {
     for (const d of (DATA.daily_by_store[sid][month] || [])) allDays.push({...d, sid});
   }
+  // Use FY26 budget as source of truth (uniform daily target = monthly budget / days_in_month)
+  const daysInMonth = (DATA.days_in_month || {})[month] || 31;
+  const fyDailyTarget = Object.keys(DATA.target_by_store || {}).reduce((sum, sid) => {
+    const monthly = (DATA.target_by_store[sid] || {})[month] || 0;
+    return sum + monthly / daysInMonth;
+  }, 0);
   const byDate = {};
   allDays.forEach(d => {
-    if (!byDate[d.date]) byDate[d.date] = { tsunashima: 0, miyakojima: 0, target: 0 };
+    if (!byDate[d.date]) byDate[d.date] = { tsunashima: 0, miyakojima: 0, target: fyDailyTarget };
     byDate[d.date][d.sid] = d.sales;
-    byDate[d.date].target += d.sales_target;
   });
   let dates = Object.keys(byDate).sort();
   let lastIdx = -1;
