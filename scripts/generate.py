@@ -28,8 +28,8 @@ STORES = {
         "short": "綱島",
         "brand": "hanabi",
         "departments": ["ヘア"],
-        # 開店日 (実データの最古から推定/設定)。 同店舗 YoY 判定に使用。
-        "open_date": "2022-05-01",  # FY22期初時点で既にOPEN
+        # 開店日。 同店舗 YoY 判定に使用。
+        "open_date": "2022-03-26",  # Hanabi 綱島店 開店 (FY21 末)
         # 店舗写真 (docs/assets/store/ 内のファイル名)
         "photos": ["tsunashima_1.jpg", "tsunashima_2.jpg"],
     },
