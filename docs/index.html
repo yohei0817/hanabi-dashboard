@@ -3544,6 +3544,7 @@ const SORT_OPTIONS = [
   { key: "shop_sales", label: "店販売上" },
   { key: "customers", label: "客数" },
   { key: "tech_customers_nominated", label: "指名客数" },
+  { key: "nomination_rate", label: "指名比率" },
   { key: "spend_per_customer", label: "客単価" },
 ];
 
@@ -3694,12 +3695,19 @@ function staffAvatar(s, size = 24) {
 
 function rankTable(rows, sortKey) {
   const rankCls = i => i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "text-gray-500";
-  const sorted = [...rows].sort((a,b) => (b[sortKey]||0) - (a[sortKey]||0));
+  // 各row に指名比率を動的計算で付与
+  const enriched = rows.map(s => {
+    const nom = s.tech_customers_nominated || 0;
+    const tot = s.tech_customers || 0;
+    return { ...s, nomination_rate: tot > 0 ? (nom / tot * 100) : 0 };
+  });
+  const sorted = [...enriched].sort((a,b) => (b[sortKey]||0) - (a[sortKey]||0));
   const isCount = key => ["customers","tech_customers_nominated"].includes(key);
-  const valFmt = (s, key) => isCount(key) ? fmtN(s[key]||0) : fmt(s[key]||0);
+  const isPct = key => ["nomination_rate"].includes(key);
+  const valFmt = (s, key) => isPct(key) ? (s[key] || 0).toFixed(1) + "%" : isCount(key) ? fmtN(s[key]||0) : fmt(s[key]||0);
   // Highlight column header for active sort
   const colCls = key => key === sortKey ? "text-gray-900 font-semibold" : "text-gray-500 font-medium";
-  return `<table class="w-full text-sm" style="min-width:680px">
+  return `<table class="w-full text-sm" style="min-width:760px">
     <thead class="text-xs">
       <tr class="border-row">
         <th class="text-left py-2 pr-2 ${colCls('rank')} w-8">#</th>
@@ -3711,6 +3719,7 @@ function rankTable(rows, sortKey) {
         <th class="text-right py-2 px-2 ${colCls('shop_sales')} whitespace-nowrap">店販</th>
         <th class="text-right py-2 px-2 ${colCls('customers')} whitespace-nowrap">客数</th>
         <th class="text-right py-2 px-2 ${colCls('tech_customers_nominated')} whitespace-nowrap">指名</th>
+        <th class="text-right py-2 px-2 ${colCls('nomination_rate')} whitespace-nowrap">指名比率</th>
         <th class="text-right py-2 pl-2 ${colCls('spend_per_customer')} whitespace-nowrap">客単価</th>
       </tr>
     </thead>
@@ -3736,6 +3745,7 @@ function rankTable(rows, sortKey) {
           ${cell('shop_sales')}
           ${cell('customers')}
           ${cell('tech_customers_nominated')}
+          ${cell('nomination_rate')}
           ${cell('spend_per_customer')}
         </tr>`;
       }).join("")}
