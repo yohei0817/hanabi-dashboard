@@ -4,9 +4,11 @@
     "name": "(staff name as it appears in CSV, e.g. '渡辺 真也')",
     "photo": "(filename in docs/assets/staff/, e.g. '渡辺.jpg')",
     "display_name": "(optional override, e.g. 'マサヤ')",
+    "kana": "フリガナ",
     "joined": "YYYY-MM-DD",
     "retired": "YYYY-MM-DD (退職日, 任意)",
-    "role": "店長 / トップ / etc"
+    "role": "店長 / トップ / アシスタント etc",
+    "employment_type": "正社員 / 業務委託 / パート / アルバイト / インターン"
   },
   "profiles": {
     "渡辺 真也": {

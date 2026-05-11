@@ -621,10 +621,23 @@
             <input type="date" id="sp_retired" class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1" />
           </label>
         </div>
-        <label class="block">
-          <span class="text-xs text-gray-600">役職</span>
-          <input type="text" id="sp_role" placeholder="店長 / トップ / アシスタント" class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1" />
-        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-xs text-gray-600">役職</span>
+            <input type="text" id="sp_role" placeholder="店長 / トップ / アシスタント" class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1" />
+          </label>
+          <label class="block">
+            <span class="text-xs text-gray-600">雇用形態</span>
+            <select id="sp_employment_type" class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1">
+              <option value="">—</option>
+              <option value="正社員">正社員</option>
+              <option value="業務委託">業務委託</option>
+              <option value="パート">パート</option>
+              <option value="アルバイト">アルバイト</option>
+              <option value="インターン">インターン</option>
+            </select>
+          </label>
+        </div>
         <div>
           <span class="text-xs text-gray-600">写真</span>
           <div class="flex items-center gap-3 mt-1">
@@ -4661,6 +4674,7 @@ function openStaffProfileModal(staffName, prefill) {
   document.getElementById("sp_joined").value = p.joined || "";
   document.getElementById("sp_retired").value = p.retired || "";
   document.getElementById("sp_role").value = p.role || "";
+  document.getElementById("sp_employment_type").value = p.employment_type || "";
   document.getElementById("sp_photo").value = p.photo || "";
   // プレビュー
   const previewEl = document.getElementById("sp_photo_preview");
@@ -4695,6 +4709,7 @@ async function saveStaffProfileForm(e) {
     joined: document.getElementById("sp_joined").value || undefined,
     retired: document.getElementById("sp_retired").value || undefined,
     role: document.getElementById("sp_role").value.trim() || undefined,
+    employment_type: document.getElementById("sp_employment_type").value || undefined,
   };
   // Remove undefined keys
   Object.keys(profile).forEach(k => profile[k] === undefined && delete profile[k]);
@@ -4994,10 +5009,21 @@ function openStaffDetail(storeId, staffName) {
   if (!allRows.length) return;
   const curRow = allRows.find(s => s.month === currentMonth) || allRows[allRows.length - 1];
   const store = DATA.stores[storeId];
+  const profile = (DATA.staff_profiles && DATA.staff_profiles.profiles && DATA.staff_profiles.profiles[staffName]) || {};
   document.getElementById("sdAvatar").innerHTML = staffAvatar(curRow, 48);
   document.getElementById("sdName").textContent = staffName;
   const deptColor = curRow.primary_dept === "ヘア" ? "var(--dept-hair)" : curRow.primary_dept === "アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
-  document.getElementById("sdStoreDept").innerHTML = `${store.name} · <span style="color:${deptColor}; font-weight:600">${curRow.primary_dept}</span>`;
+  // プロフィールから役職 + 雇用形態 を表示
+  const roleStr = profile.role ? ` · ${profile.role}` : "";
+  const empColor = profile.employment_type === "正社員" ? "#1976D2"
+    : profile.employment_type === "業務委託" ? "#7B1FA2"
+    : profile.employment_type === "パート" ? "#388E3C"
+    : profile.employment_type === "アルバイト" ? "#F57C00"
+    : "#6B7280";
+  const empBadge = profile.employment_type
+    ? `<span class="ml-2 inline-block px-2 py-0.5 rounded text-[10px] font-bold" style="background:${empColor}15; color:${empColor}; border:1px solid ${empColor}40">${profile.employment_type}</span>`
+    : "";
+  document.getElementById("sdStoreDept").innerHTML = `${store.name} · <span style="color:${deptColor}; font-weight:600">${curRow.primary_dept}</span>${roleStr}${empBadge}`;
 
   // Current month KPI
   const ms = (DATA.monthly_by_store[storeId] || {})[currentMonth];
