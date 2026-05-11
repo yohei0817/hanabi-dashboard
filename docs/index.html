@@ -2320,16 +2320,40 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!val.startsWith("ghp_") && !val.startsWith("github_pat_")) {
       if (!confirm("Personal Access Token は通常 'ghp_' か 'github_pat_' で始まります。\n本当にこのトークンで保存しますか？")) return;
     }
+    const statusEl = document.getElementById("ghTokenStatus");
+    if (statusEl) statusEl.innerHTML = `<span style="color:#6B7280">検証中…</span>`;
     // Validate by making a GET to repo
     try {
       const r = await fetch(`https://api.github.com/repos/${GH_REPO}`, {
         headers: { Authorization: "token " + val, Accept: "application/vnd.github.v3+json" }
       });
       if (!r.ok) {
-        showToast(`⚠️ トークン検証失敗 (HTTP ${r.status}) — repo権限/トークン正しいか確認してください`, "error");
+        let detail = "";
+        if (r.status === 401) {
+          detail = `<strong>原因の可能性</strong>:<br>
+            1. トークン値が間違っている (コピペミス、 前後空白等)<br>
+            2. トークン期限切れ / 削除済<br>
+            3. <strong>Organization 設定で PAT が許可されてない</strong><br>
+            <br>
+            <strong>対処</strong>:<br>
+            ・classic PAT の場合: <a href="https://github.com/organizations/hanabi-board/settings/personal-access-tokens-policy" target="_blank" class="underline text-blue-600">hanabi-board の Org 設定</a> → 'Personal access tokens (classic)' を 'Allow access' に変更<br>
+            ・fine-grained PAT の場合: トークン作成時に Resource owner = hanabi-board + Contents: Read and write を選択`;
+        } else if (r.status === 403) {
+          detail = `<strong>スコープ不足</strong>。 トークン発行時に <code>repo</code> をチェックしましたか？`;
+        } else if (r.status === 404) {
+          detail = `リポジトリにアクセスできません。 トークンの権限範囲を確認してください。`;
+        } else {
+          detail = `HTTP ${r.status} エラー。`;
+        }
+        if (statusEl) {
+          statusEl.innerHTML = `<div style="color:#DC2626">⚠️ トークン検証失敗 (HTTP ${r.status})</div>
+            <div class="text-[11px] mt-2 leading-relaxed" style="color:#374151">${detail}</div>`;
+        }
+        showToast(`⚠️ HTTP ${r.status} — モーダル内の詳細を確認`, "error");
         return;
       }
     } catch (e) {
+      if (statusEl) statusEl.innerHTML = `<div style="color:#DC2626">⚠️ ネットワークエラー: ${e.message}</div>`;
       showToast("⚠️ ネットワークエラー: " + e.message, "error");
       return;
     }
