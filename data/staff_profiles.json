@@ -41,6 +41,14 @@
       "display_name": "宮里",
       "photo": "宮里_乃の子.jpg"
     },
+    "大橋 未来": {
+      "display_name": "大橋",
+      "photo": "大橋_未来.jpg"
+    },
+    "内藤 ひなき": {
+      "display_name": "内藤",
+      "photo": "内藤_ひなき.jpg"
+    },
     "ふせ ほのか": {
       "display_name": "ふせほのか",
       "photo": "ふせほのか.jpg",
@@ -53,10 +61,11 @@
       "retired": "2025-04-01",
       "_note": "綱島ヘア、 退職済 (CSV最終 202503)。 退職日は推定値"
     },
-    "KAMA": {
+    "金山 隆介": {
       "display_name": "KAMA",
       "photo": "KAMA.jpg",
-      "_note": "CSV未登録 — 新人 or 入社予定? 水野さんに要確認"
+      "retired": "2026-04-01",
+      "_note": "宮古島アイ、 退職済 (CSV最終 202603)。 退職日は推定値"
     }
   }
 }
