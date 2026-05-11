@@ -45,8 +45,11 @@
       "role": "管理者（ヘア）"
     },
     "山尾 奈穂": {
-      "display_name": "山尾",
-      "photo": "山尾_奈穂.jpg"
+      "photo": "山尾_奈穂.jpg",
+      "display_name": "奈穂氏",
+      "kana": "ヤマオ ナホ",
+      "joined": "2026-09-01",
+      "role": "管理者（アイ＆ネイル）"
     },
     "一宮 有澄": {
       "display_name": "一宮",
