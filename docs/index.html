@@ -161,6 +161,7 @@
     <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
       <span class="text-[11px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
       <select id="monthSelect" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs sm:text-sm"></select>
+      <button id="searchBtn" class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1 hidden sm:inline-block" title="検索 (Cmd+K)">🔍</button>
       <button id="printBtn" class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1 hidden sm:inline-block" title="サマリーを印刷 (A4 1枚)">印刷</button>
       <button id="ghTokenBtn" class="hidden text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1" title="GitHub 直接書き込み設定">GH</button>
       <span id="roleBadge" class="text-xs px-2 py-0.5 rounded border border-gray-600 text-gray-300 hidden sm:inline">…</span>
@@ -526,6 +527,22 @@
   </div>
 
   <!-- Recruit candidate modal -->
+  <!-- Quick search modal (Cmd+K) -->
+  <div id="searchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20 p-4">
+    <div class="bg-white rounded-lg shadow-2xl max-w-xl w-full overflow-hidden">
+      <div class="border-b border-gray-200 p-3 flex items-center gap-2">
+        <span class="text-gray-400">🔍</span>
+        <input type="text" id="searchInput" placeholder="スタッフ・店舗・メニュー・タブ名で検索..." class="flex-1 outline-none text-sm" autofocus />
+        <button id="searchClose" class="text-gray-400 hover:text-gray-700">×</button>
+      </div>
+      <div id="searchResults" class="max-h-96 overflow-y-auto"></div>
+      <div class="bg-gray-50 border-t border-gray-200 px-3 py-2 text-[11px] text-gray-500 flex justify-between">
+        <span>↑↓ 移動 · Enter 選択 · Esc 閉じる</span>
+        <span>Cmd+K でいつでも開く</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Staff profile edit modal (master only) -->
   <div id="staffProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -919,6 +936,7 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 });
 
 // Print: 2-page mode (summary + sales). Body class controls which panels render.
+document.getElementById("searchBtn").addEventListener("click", () => openSearchModal());
 document.getElementById("printBtn").addEventListener("click", () => {
   // Set print mode flag for CSS
   document.body.classList.add("print-mode");
@@ -2218,6 +2236,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (sdClose) sdClose.addEventListener("click", closeStaffDetail);
   const sdModal = document.getElementById("staffDetailModal");
   if (sdModal) sdModal.addEventListener("click", (e) => { if (e.target === sdModal) closeStaffDetail(); });
+
+  // Search modal
+  const sInput = document.getElementById("searchInput");
+  if (sInput) sInput.addEventListener("input", (e) => { _searchSelectedIdx = 0; renderSearchResults(e.target.value); });
+  const sClose = document.getElementById("searchClose");
+  if (sClose) sClose.addEventListener("click", closeSearchModal);
+  const sModal = document.getElementById("searchModal");
+  if (sModal) sModal.addEventListener("click", (e) => { if (e.target === sModal) closeSearchModal(); });
 
   // Staff profile modal
   const spForm = document.getElementById("staffProfileForm");
@@ -3762,6 +3788,146 @@ function drawMgmtCompanyTrend() {
     }
   });
 }
+
+// === Quick search (Cmd+K) ===
+let _searchIndex = null;
+let _searchSelectedIdx = 0;
+function buildSearchIndex() {
+  const items = [];
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    items.push({ type: "tab", icon: "📋", label: btn.textContent.trim(), action: () => activateTab(btn.dataset.tab) });
+  });
+  // Stores
+  for (const sid of Object.keys(DATA.stores || {})) {
+    const store = DATA.stores[sid];
+    items.push({ type: "store", icon: sid === "miyakojima" ? "💜" : "💙", label: store.name, sub: store.departments.join(" / "), action: () => activateTab("sales") });
+  }
+  // Staff (current month, visible)
+  const seenNames = new Set();
+  (DATA.staff_rows || []).filter(s => !s.hidden && s.month === currentMonth).forEach(s => {
+    if (seenNames.has(s.store + "::" + s.name)) return;
+    seenNames.add(s.store + "::" + s.name);
+    const store = DATA.stores[s.store];
+    items.push({
+      type: "staff", icon: "👤", label: s.name, sub: `${store.short || store.name} · ${s.primary_dept}`,
+      action: () => { activateTab("staff"); setTimeout(() => openStaffDetail(s.store, s.name), 200); }
+    });
+  });
+  // Menu categories (latest period available)
+  const menuData = DATA.menu_data || {};
+  const latestMenuKey = Object.keys(menuData).filter(k => /^\d{6}$/.test(k)).sort().pop()
+    || Object.keys(menuData).filter(k => k.endsWith("_annual")).sort().pop();
+  if (latestMenuKey) {
+    const seenCat = new Set();
+    for (const sid of Object.keys(menuData[latestMenuKey] || {})) {
+      for (const r of menuData[latestMenuKey][sid]) {
+        const cat = r.category_status_name;
+        if (cat && !seenCat.has(cat)) {
+          seenCat.add(cat);
+          items.push({ type: "category", icon: "🏷", label: cat, sub: "メニューカテゴリ", action: () => { activateTab("menu"); setTimeout(() => { const sb = document.getElementById("menuSearchBox"); if (sb) { sb.value = cat; sb.dispatchEvent(new Event("input")); } }, 300); } });
+        }
+      }
+    }
+  }
+  // Admin actions (master only)
+  if (currentRole === "master") {
+    items.push({ type: "action", icon: "💰", label: "予算編集", sub: "本部のみ", action: () => { activateTab("management"); setTimeout(openBudgetModal, 300); } });
+    items.push({ type: "action", icon: "👥", label: "候補者を追加", sub: "採用", action: () => { activateTab("recruit"); setTimeout(() => openRecruitModal(null), 300); } });
+    items.push({ type: "action", icon: "⚙", label: "GitHub接続設定", sub: "本部のみ", action: () => document.getElementById("ghTokenBtn").click() });
+  }
+  return items;
+}
+function openSearchModal() {
+  if (!DATA) return;
+  _searchIndex = buildSearchIndex();
+  _searchSelectedIdx = 0;
+  const modal = document.getElementById("searchModal");
+  if (!modal) return;
+  document.getElementById("searchInput").value = "";
+  renderSearchResults("");
+  modal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("searchInput").focus(), 50);
+}
+function closeSearchModal() {
+  document.getElementById("searchModal").classList.add("hidden");
+}
+function renderSearchResults(query) {
+  const root = document.getElementById("searchResults");
+  if (!root) return;
+  const q = query.trim().toLowerCase();
+  let filtered = _searchIndex || [];
+  if (q) {
+    filtered = filtered.filter(it =>
+      it.label.toLowerCase().includes(q) || (it.sub || "").toLowerCase().includes(q)
+    );
+  }
+  filtered = filtered.slice(0, 20);
+  _searchSelectedIdx = Math.min(_searchSelectedIdx, filtered.length - 1);
+  if (_searchSelectedIdx < 0) _searchSelectedIdx = 0;
+  if (!filtered.length) {
+    root.innerHTML = `<div class="px-4 py-6 text-center text-sm text-gray-400">該当なし</div>`;
+    return;
+  }
+  root.innerHTML = filtered.map((it, i) => `
+    <div class="search-item flex items-center gap-3 px-4 py-2.5 cursor-pointer ${i === _searchSelectedIdx ? 'bg-gray-100' : 'hover:bg-gray-50'}" data-idx="${i}">
+      <span class="text-lg">${it.icon}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold truncate">${it.label}</div>
+        ${it.sub ? `<div class="text-[11px] text-gray-500 truncate">${it.sub}</div>` : ""}
+      </div>
+      <span class="text-[10px] text-gray-400 uppercase">${it.type}</span>
+    </div>
+  `).join("");
+  // Wire click
+  root.querySelectorAll(".search-item").forEach(el => {
+    el.addEventListener("click", () => {
+      const idx = parseInt(el.dataset.idx);
+      const item = filtered[idx];
+      closeSearchModal();
+      if (item) item.action();
+    });
+  });
+  // Re-store filtered for keyboard nav
+  root._filtered = filtered;
+}
+// Keyboard handler
+document.addEventListener("keydown", (e) => {
+  // Cmd+K to open
+  if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    e.preventDefault();
+    if (DATA) openSearchModal();
+    return;
+  }
+  // Escape to close
+  if (e.key === "Escape") {
+    const modal = document.getElementById("searchModal");
+    if (modal && !modal.classList.contains("hidden")) {
+      closeSearchModal();
+      return;
+    }
+  }
+  // When search modal open: handle arrows + enter
+  const modal = document.getElementById("searchModal");
+  if (modal && !modal.classList.contains("hidden")) {
+    const root = document.getElementById("searchResults");
+    const filtered = root._filtered || [];
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      _searchSelectedIdx = Math.min(filtered.length - 1, _searchSelectedIdx + 1);
+      renderSearchResults(document.getElementById("searchInput").value);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      _searchSelectedIdx = Math.max(0, _searchSelectedIdx - 1);
+      renderSearchResults(document.getElementById("searchInput").value);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const item = filtered[_searchSelectedIdx];
+      closeSearchModal();
+      if (item) item.action();
+    }
+  }
+});
 
 // === 顧客分析タブ (失客 / 曜日別 / 年代別 / 再来店) ===
 const CUSTOMERS_SUBTAB_KEY = "hanabi_customers_subtab";
