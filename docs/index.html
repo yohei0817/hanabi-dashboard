@@ -92,10 +92,17 @@
     @page { size: A4 portrait; margin: 10mm 8mm; }
     html, body { background: #fff !important; font-size: 9pt; }
     .login-overlay, .tab-bar, .brand-strip, footer, #realtimeTodayBanner,
-    #recruitModal, .no-print { display: none !important; }
-    /* Force only summary panel to show, regardless of active state */
-    .tab-panel { display: none !important; }
-    .tab-panel[data-panel="summary"] { display: block !important; animation: none !important; }
+    #recruitModal, #ghTokenModal, #staffDetailModal, .no-print { display: none !important; }
+    /* Print mode: only summary + sales panels (2-page report) */
+    body.print-mode .tab-panel { display: none !important; }
+    body.print-mode .tab-panel[data-panel="summary"],
+    body.print-mode .tab-panel[data-panel="sales"] { display: block !important; animation: none !important; }
+    /* When NOT in print-mode (i.e. user printing from native browser without our button),
+       fall back to summary only */
+    body:not(.print-mode) .tab-panel { display: none !important; }
+    body:not(.print-mode) .tab-panel[data-panel="summary"] { display: block !important; animation: none !important; }
+    /* Page break between sections */
+    .tab-panel[data-panel="sales"] { page-break-before: always; }
     main { padding: 0 !important; max-width: 100% !important; }
     .card { box-shadow: none !important; border: 1px solid #ccc !important; border-radius: 6px !important; page-break-inside: avoid; }
     .card.p-5, .card.p-4 { padding: 0.4rem !important; }
@@ -106,15 +113,15 @@
     .text-2xl { font-size: 14pt !important; }
     .text-xl { font-size: 11pt !important; }
     /* Compress chart heights */
-    canvas { max-height: 120px !important; }
-    [style*="height:280px"], [style*="height:260px"], [style*="height:240px"] { height: 120px !important; }
-    .mb-5 { margin-bottom: 0.5rem !important; }
-    .mb-4 { margin-bottom: 0.4rem !important; }
-    .mb-3 { margin-bottom: 0.3rem !important; }
+    canvas { max-height: 100px !important; }
+    [style*="height:280px"], [style*="height:260px"], [style*="height:240px"] { height: 100px !important; }
+    .mb-5 { margin-bottom: 0.4rem !important; }
+    .mb-4 { margin-bottom: 0.3rem !important; }
+    .mb-3 { margin-bottom: 0.25rem !important; }
     /* Hide month selector during print but keep month label */
     select { border: none !important; appearance: none; -webkit-appearance: none; padding: 0 !important; background: transparent !important; }
     /* Print URL/timestamp footer via @page mechanism */
-    .print-footer { display: block !important; font-size: 7pt; color: #888; text-align: center; margin-top: 6mm; }
+    .print-footer { display: block !important; font-size: 7pt; color: #888; text-align: center; margin-top: 4mm; }
   }
   .print-footer { display: none; }
 </style>
@@ -240,6 +247,7 @@
       <h3 class="section-title mb-3">月次予算 vs 実績 <span class="section-sub">店舗別 + 部門別</span></h3>
       <div id="deptBudgetTable"></div>
     </div>
+    <div class="print-footer">HANABI Dashboard · 売上・予算 · <span class="printGeneratedAt2"></span> · 数値はすべて税抜</div>
   </div>
 
   <!-- =========== Tab 3: 来客 & 指名 =========== -->
@@ -759,11 +767,20 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   document.getElementById("loginId").focus();
 });
 
-// Print: switch to サマリー first to ensure charts are rendered
+// Print: 2-page mode (summary + sales). Body class controls which panels render.
 document.getElementById("printBtn").addEventListener("click", () => {
-  if (typeof activateTab === "function") activateTab("summary");
-  // Wait one frame so canvases have rendered, then print
-  setTimeout(() => window.print(), 350);
+  // Set print mode flag for CSS
+  document.body.classList.add("print-mode");
+  // Activate both tabs sequentially so their charts get rendered
+  if (typeof activateTab === "function") {
+    activateTab("sales");
+    setTimeout(() => {
+      activateTab("summary");
+      setTimeout(() => window.print(), 400);
+    }, 200);
+  }
+  // Clear print-mode after a delay
+  window.addEventListener("afterprint", () => document.body.classList.remove("print-mode"), { once: true });
 });
 
 // (Auth resume moved to bottom of script — after all declarations to avoid TDZ on _dataLoaded)
@@ -839,6 +856,7 @@ async function loadData() {
   document.getElementById("generatedAt").textContent = "generated " + d.generated_at;
   const pgen = document.getElementById("printGeneratedAt");
   if (pgen) pgen.textContent = d.generated_at;
+  document.querySelectorAll(".printGeneratedAt2").forEach(el => el.textContent = d.generated_at);
   const ms = document.getElementById("monthSelect");
   d.months.forEach(m => {
     const o = document.createElement("option");
