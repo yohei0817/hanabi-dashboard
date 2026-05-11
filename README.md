@@ -84,6 +84,12 @@ python3 -m http.server 8767 --directory docs
 
 設定: ヘッダー「GH」 ボタン → Personal Access Token (PAT) 入力 (1回のみ)。
 
+**PAT 運用ルール**:
+- 期限: **1年** (次回更新: トークン発行日から1年後)
+- スコープ: `repo` のみ
+- 漏洩疑い時は GitHub Settings → Personal access tokens から即 Revoke
+- 期限切れ前に新トークン発行 → 麗花さんに再共有 → ダッシュボードの「GH」 ボタンから更新
+
 ## 達成率の表記ルール
 
 | 種類 | 計算式 | 用途 |
