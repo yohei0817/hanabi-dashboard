@@ -217,7 +217,7 @@
     <!-- Visit breakdown (full width — dept moved into ELLE store card above) -->
     <div class="card p-5 mb-5">
       <h3 class="section-title mb-3">新規 vs リピート <span class="section-sub">店舗別</span></h3>
-      <div class="grid grid-cols-3 gap-3" id="visitDonutRow"></div>
+      <div class="grid grid-cols-2 gap-3" id="visitDonutRow"></div>
     </div>
     <div id="deptBreakdownSummary" class="hidden"></div>
     <div class="print-footer">HANABI Dashboard · <span id="printGeneratedAt"></span> · 数値はすべて税抜</div>
@@ -227,7 +227,7 @@
   <div class="tab-panel" data-panel="sales">
     <div class="mb-4">
       <h2 class="text-2xl font-bold">売上・予算</h2>
-      <div class="text-sm text-gray-500 mt-1">店舗別予算進捗 / 部門別 (宮古島) / 日別推移</div>
+      <div class="text-sm text-gray-500 mt-1">店舗別予算進捗 / 部門別 (ELLE by Hanabi 宮古島店) / 日別推移</div>
     </div>
     <div class="grid md:grid-cols-2 gap-3 mb-5" id="salesStoreCards"></div>
     <div class="card p-5 mb-5">
@@ -244,7 +244,7 @@
   <div class="tab-panel" data-panel="visits">
     <div class="mb-4">
       <h2 class="text-2xl font-bold">来客分析</h2>
-      <div class="text-sm text-gray-500 mt-1">店舗別に比較 (綱島=ヘア専門 / 宮古島=トータルビューティ。 業態が違うので全社合算しない)</div>
+      <div class="text-sm text-gray-500 mt-1">店舗別に比較 (Hanabi 綱島店 = ヘア専門 / ELLE by Hanabi 宮古島店 = トータルビューティ。 業態が違うので全社合算しない)</div>
     </div>
     <h3 class="section-title mb-2 mt-1">新規 vs リピート <span class="section-sub">店舗別</span></h3>
     <div class="grid md:grid-cols-2 gap-3 mb-5" id="visitorBreakdownCards"></div>
@@ -341,7 +341,7 @@
 
     <!-- Department share over years (miyakojima) -->
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">部門別 年度推移 <span class="section-sub">ELLE 宮古島店 (2025/9 OPEN以降)</span></h3>
+      <h3 class="section-title mb-3">部門別 年度推移 <span class="section-sub">ELLE by Hanabi 宮古島店 (2025/9 OPEN以降)</span></h3>
       <div style="height:260px"><canvas id="growthDeptChart"></canvas></div>
     </div>
 
@@ -375,7 +375,7 @@
 
         <!-- Department comparison (宮古島) -->
         <div>
-          <h4 class="section-title mb-3">部門別 通年比較 <span class="section-sub">ELLE 宮古島店</span></h4>
+          <h4 class="section-title mb-3">部門別 通年比較 <span class="section-sub">ELLE by Hanabi 宮古島店</span></h4>
           <div id="annualDeptCompare"></div>
         </div>
 
@@ -784,7 +784,7 @@ function renderTopKpi() {
     (function() {
       // 客単価 — 店舗別表示 (全社合算は業態違うので避ける)
       const perStore = SCOPE.storeRows.map(r => ({
-        name: r.store.short || r.store.name,
+        name: r.store.name,
         sid: r.sid,
         avg: r.customers ? Math.round(r.sales / r.customers) : 0
       })).filter(s => s.avg > 0);
@@ -800,7 +800,7 @@ function renderTopKpi() {
             <span class="kpi-num text-lg font-bold" style="color:${color}">${fmt(s.avg)}</span>
           </div>`;
         }).join("")}</div>`,
-        sub: "綱島=ヘア / 宮古島=トータル",
+        sub: "Hanabi 綱島店 = ヘア専門 / ELLE by Hanabi 宮古島店 = トータルビューティ",
         rawMain: true,  // mark to skip default text rendering
       };
     })(),
@@ -825,7 +825,7 @@ function renderTopKpi() {
         const free = (r.ms && r.ms.tech_customers_free) || 0;
         const tot = nom + free;
         return {
-          name: r.store.short || r.store.name,
+          name: r.store.name,
           sid: r.sid,
           rate: tot ? (nom / tot * 100) : null
         };
@@ -1002,7 +1002,7 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: tsu, backgroundColor: "#1E88E5", stack: "s", borderRadius: 4 },
-        { label: "ELLE 宮古島店", data: ele, backgroundColor: "#D63384", stack: "s", borderRadius: 4 },
+        { label: "ELLE by Hanabi 宮古島店", data: ele, backgroundColor: "#D63384", stack: "s", borderRadius: 4 },
       ]
     },
     options: {
@@ -1036,7 +1036,7 @@ function drawGrowthCustomersChart(fys, fyCust, isFYInProgress) {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: tsu, borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, pointRadius: 5, fill: false },
-        { label: "ELLE 宮古島店", data: ele.map(v => v || null), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
+        { label: "ELLE by Hanabi 宮古島店", data: ele.map(v => v || null), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
       ]
     },
     options: {
@@ -1070,7 +1070,7 @@ function drawGrowthAvgTicketChart(fys, fySales, fyCust, isFYInProgress) {
       labels,
       datasets: [
         { label: "Hanabi 綱島店 (ヘア)", data: tsu, borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, pointRadius: 5, fill: false },
-        { label: "ELLE 宮古島店 (トータルビューティ)", data: ele, borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
+        { label: "ELLE by Hanabi 宮古島店 (トータルビューティ)", data: ele, borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
       ]
     },
     options: {
@@ -1224,7 +1224,7 @@ function renderAnnualReport() {
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">${cmpLabel} 通年実績</div>
       <div class="kpi-num text-2xl font-bold">${fmt(cmpTotal)}</div>
-      <div class="text-[11px] text-gray-500 mt-1">綱島 ${fmtM(cmpTsu)} + 宮古島 ${fmtM(cmpEle)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">Hanabi 綱島店 ${fmtM(cmpTsu)} + ELLE by Hanabi 宮古島店 ${fmtM(cmpEle)}</div>
     </div>
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}実績</div>
@@ -1914,9 +1914,9 @@ function drawMenu() {
   const scopes = [
     { title: "Hanabi 綱島店", subtitle: "ヘア専門", sid: "tsunashima", dept: null, headerCls: "hanabi-gradient" },
     { title: "ELLE by Hanabi 宮古島店", subtitle: "全部門合算", sid: "miyakojima", dept: null, headerCls: "elle-gradient" },
-    { title: "ELLE 宮古島店 — ヘア部門", subtitle: "ヘア商品のみ", sid: "miyakojima", dept: "ヘア", headerCls: "elle-gradient" },
-    { title: "ELLE 宮古島店 — アイ部門", subtitle: "アイメニュー商品のみ", sid: "miyakojima", dept: "アイ", headerCls: "elle-gradient" },
-    { title: "ELLE 宮古島店 — ネイル部門", subtitle: "ネイル商品のみ", sid: "miyakojima", dept: "ネイル", headerCls: "elle-gradient" },
+    { title: "ELLE by Hanabi 宮古島店 — ヘア部門", subtitle: "ヘア商品のみ", sid: "miyakojima", dept: "ヘア", headerCls: "elle-gradient" },
+    { title: "ELLE by Hanabi 宮古島店 — アイ部門", subtitle: "アイメニュー商品のみ", sid: "miyakojima", dept: "アイ", headerCls: "elle-gradient" },
+    { title: "ELLE by Hanabi 宮古島店 — ネイル部門", subtitle: "ネイル商品のみ", sid: "miyakojima", dept: "ネイル", headerCls: "elle-gradient" },
   ];
 
   const root = document.getElementById("menuSections");
@@ -2020,10 +2020,10 @@ function renderAlerts() {
       const pct = (sales / expected * 100);
       const color = d === "ヘア" ? "#E91E63" : d === "アイ" ? "#1E88E5" : "#F59E0B";
       if (pct < 70) {
-        alerts.push({ severity: 'warn', icon: '●', title: `宮古島 ${d}部門 ペース ${pct.toFixed(0)}% — 未達`,
+        alerts.push({ severity: 'warn', icon: '●', title: `ELLE by Hanabi 宮古島店 ${d}部門 ペース ${pct.toFixed(0)}% — 未達`,
           detail: `月予算 ${fmt(monthly)} の進捗値 ${fmt(expected)} に対し ${fmt(sales)}、▼ ${fmt(expected - sales)}。`, accentColor: color });
       } else if (pct >= 130) {
-        alerts.push({ severity: 'good', icon: '●', title: `宮古島 ${d}部門 ペース ${pct.toFixed(0)}% — 好調`,
+        alerts.push({ severity: 'good', icon: '●', title: `ELLE by Hanabi 宮古島店 ${d}部門 ペース ${pct.toFixed(0)}% — 好調`,
           detail: `月予算 ${fmt(monthly)} を超過予想。需要分析を。`, accentColor: color });
       }
     }
@@ -2094,7 +2094,7 @@ function renderRealtimeBanner() {
   };
   const occRate = parseRate(s.today_active_staff);
   const resRate = parseRate(s.today_reservation_rate);
-  const storeName = s.current_store_code === "002" ? "ELLE 宮古島店" : "Hanabi 綱島店";
+  const storeName = s.current_store_code === "002" ? "ELLE by Hanabi 宮古島店" : "Hanabi 綱島店";
 
   root.innerHTML = `
     <div class="card overflow-hidden" style="border:1px solid #d1fae5; box-shadow: 0 0 0 3px rgba(0,200,83,0.08)">
@@ -2498,8 +2498,8 @@ function renderDeptBreakdownSummary() {
 function renderVisitDonut() {
   const root = document.getElementById("visitDonutRow");
   if (!root) return;
+  // 設計方針: リピート率は業態違いで混ぜると誤解 → 店舗別のみ
   const scopes = [
-    { id: "company", title: "全社", vis: SCOPE.cVis, headerCls: "" },
     { id: "tsunashima", title: "Hanabi 綱島店", vis: SCOPE.storeRows.find(r=>r.sid==="tsunashima")?.vis, headerCls: "hanabi-gradient" },
     { id: "miyakojima", title: "ELLE by Hanabi 宮古島店", vis: SCOPE.storeRows.find(r=>r.sid==="miyakojima")?.vis, headerCls: "elle-gradient" },
   ];
@@ -2596,7 +2596,7 @@ function renderSalesTab() {
           </div>
 
           ${showDept ? `<div class="pt-3 mt-3 border-t border-gray-100">
-            <div class="text-xs text-gray-500 mb-2 font-semibold">部門別売上 (宮古島のみ)</div>
+            <div class="text-xs text-gray-500 mb-2 font-semibold">部門別売上</div>
             <div class="space-y-1.5">
               ${departments.map(d => {
                 const sales = ms.by_dept[d].sales;
@@ -2984,7 +2984,7 @@ function drawVisitorMonthly() {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: months.map(m => customersFor("tsunashima", m)), backgroundColor: "#1E88E5" },
-        { label: "ELLE 宮古島店", data: months.map(m => customersFor("miyakojima", m)), backgroundColor: "#D63384" },
+        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => customersFor("miyakojima", m)), backgroundColor: "#D63384" },
       ]
     },
     options: {
@@ -3012,7 +3012,7 @@ function drawRepeatRateMonthly() {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: months.map(m => repeatFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE 宮古島店", data: months.map(m => repeatFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => repeatFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
       ]
     },
     options: {
@@ -3047,7 +3047,7 @@ function drawAvgTicketMonthly() {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: months.map(m => ticketFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE 宮古島店", data: months.map(m => ticketFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => ticketFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
       ]
     },
     options: {
@@ -3081,7 +3081,7 @@ function drawNominationRateMonthly() {
       labels,
       datasets: [
         { label: "Hanabi 綱島店", data: months.map(m => nomRateFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE 宮古島店", data: months.map(m => nomRateFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => nomRateFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
       ]
     },
     options: {
@@ -3130,11 +3130,11 @@ function drawMonthlyTrend() {
       labels: monthLabels,
       datasets: [
         // FY25 (lighter, prior year)
-        { label: `${cmpLabel} 綱島`, data: cmpTsu, backgroundColor: "rgba(30,136,229,0.35)", stack: "cmp", borderRadius: 2 },
-        { label: `${cmpLabel} 宮古島`, data: cmpEle, backgroundColor: "rgba(214,51,132,0.35)", stack: "cmp", borderRadius: 2 },
+        { label: `${cmpLabel} Hanabi 綱島店`, data: cmpTsu, backgroundColor: "rgba(30,136,229,0.35)", stack: "cmp", borderRadius: 2 },
+        { label: `${cmpLabel} ELLE by Hanabi 宮古島店`, data: cmpEle, backgroundColor: "rgba(214,51,132,0.35)", stack: "cmp", borderRadius: 2 },
         // Target FY (saturated, current)
-        { label: `${tgtLabel} 綱島`, data: tgtTsu, backgroundColor: "#1E88E5", stack: "tgt", borderRadius: 2 },
-        { label: `${tgtLabel} 宮古島`, data: tgtEle, backgroundColor: "#D63384", stack: "tgt", borderRadius: 2 },
+        { label: `${tgtLabel} Hanabi 綱島店`, data: tgtTsu, backgroundColor: "#1E88E5", stack: "tgt", borderRadius: 2 },
+        { label: `${tgtLabel} ELLE by Hanabi 宮古島店`, data: tgtEle, backgroundColor: "#D63384", stack: "tgt", borderRadius: 2 },
         // Target FY budget overlay
         { label: `${tgtLabel} 予算`, data: tgtTarget, type: "line", borderColor: "#1A1A1A", borderWidth: 2, borderDash: [4,4], backgroundColor: "transparent", pointRadius: 3, pointBackgroundColor: "#1A1A1A", tension: 0.2, stack: "_line" },
       ]
@@ -3185,7 +3185,7 @@ function drawDailySalesChart(month) {
       labels: dates.map(x => x.slice(5)),
       datasets: [
         { label: "Hanabi 綱島店", data: dates.map(x => byDate[x].tsunashima), backgroundColor: "#1E88E5" },
-        { label: "ELLE 宮古島店", data: dates.map(x => byDate[x].miyakojima), backgroundColor: "#D63384" },
+        { label: "ELLE by Hanabi 宮古島店", data: dates.map(x => byDate[x].miyakojima), backgroundColor: "#D63384" },
         { label: "目標 (合算)", data: dates.map(x => byDate[x].target), type: "line", borderColor: "#FBBF24", borderDash: [4,4], backgroundColor: "transparent", pointRadius: 0 }
       ]
     },
