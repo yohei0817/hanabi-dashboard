@@ -485,7 +485,13 @@
 
     <!-- 外部メディア (HotPepper / Instagram) -->
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">外部メディア指標 <span class="section-sub">HotPepper Beauty 評価 / Instagram フォロワー</span></h3>
+      <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
+        <h3 class="section-title">外部メディア指標 <span class="section-sub">HotPepper Beauty 評価 / Instagram フォロワー</span></h3>
+        <div class="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1 flex items-center gap-1.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          毎月 1日 9:30 JST に自動更新
+        </div>
+      </div>
       <div id="mgmtExternal"></div>
     </div>
   </div>
@@ -4170,29 +4176,41 @@ function renderManagementTab() {
         return `<div class="card overflow-hidden">
           <div class="${gradient} text-white px-4 py-2 text-sm font-bold">${r.store.name}</div>
           <div class="p-4">
-            <div class="grid grid-cols-2 gap-3 text-sm mb-3">
-              <div>
-                <div class="text-[11px] text-gray-500">HotPepper 評価${listings.length > 1 ? ` (${listings.length}ページ平均)` : ""}</div>
-                <div class="mt-1">${renderStars(displayRating, { size: "1.3em" })}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-0 mb-3">
+              <!-- HPB セクション -->
+              <div class="md:pr-4 md:border-r border-gray-200 pb-3 md:pb-0 border-b md:border-b-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style="background:#EA5550">HPB</span>
+                  <span class="text-[11px] font-semibold text-gray-700">HotPepper Beauty</span>
+                  ${listings.length > 1 ? `<span class="text-[10px] text-gray-400">(${listings.length}ページ平均)</span>` : ""}
+                </div>
+                <div>${renderStars(displayRating, { size: "1.3em" })}</div>
                 <div class="text-[11px] text-gray-500 mt-1.5">${displayReviewCount != null ? "口コミ " + displayReviewCount + "件" : "口コミ —"} ${reviewDelta != null && reviewDelta > 0 ? `<span class="text-green-600">+${reviewDelta}</span>` : ""}</div>
                 ${ratingDelta != null && parseFloat(ratingDelta) !== 0 ? `<div class="text-[10px] mt-0.5" style="color:${parseFloat(ratingDelta) >= 0 ? '#10B981' : '#DC2626'}">${parseFloat(ratingDelta) >= 0 ? '+' : ''}${ratingDelta} (前月比)</div>` : ""}
-                ${listings.length > 1 ? `<div class="mt-2 space-y-1">${listings.map(l => `
+                ${listings.length > 1 ? `<div class="mt-2 space-y-1 pt-2 border-t border-gray-100">${listings.map(l => `
                   <div class="text-[11px] flex items-center gap-1.5">
                     <span class="text-gray-600 font-semibold">${l.category || "—"}</span>
                     ${renderStars(l.rating, { size: "0.7em", showValue: true })}
                     ${l.review_count != null ? `<span class="text-gray-500">(${l.review_count}件)</span>` : ""}
                   </div>`).join("")}</div>` : ""}
               </div>
-              <div>
-                <div class="text-[11px] text-gray-500">Instagram</div>
-                <div class="kpi-num text-xl font-bold mt-0.5">${igCur.followers != null ? igCur.followers.toLocaleString() : "—"}</div>
-                <div class="text-[11px] text-gray-500 mt-1">フォロワー ${igCur.posts != null ? "· 投稿 " + igCur.posts : ""}</div>
+              <!-- Instagram セクション -->
+              <div class="md:pl-4 pt-3 md:pt-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style="background:linear-gradient(45deg,#F58529 0%,#DD2A7B 50%,#8134AF 100%)">IG</span>
+                  <span class="text-[11px] font-semibold text-gray-700">Instagram</span>
+                </div>
+                <div class="kpi-num text-xl font-bold">${igCur.followers != null ? igCur.followers.toLocaleString() : "—"} <span class="text-[11px] font-normal text-gray-500">フォロワー</span></div>
+                <div class="text-[11px] text-gray-500 mt-1">${igCur.posts != null ? "投稿 " + igCur.posts.toLocaleString() + " 件" : ""}</div>
                 ${followDelta != null ? `<div class="text-[10px] mt-0.5" style="color:${followDelta >= 0 ? '#10B981' : '#DC2626'}">${followDelta >= 0 ? '+' : ''}${followDelta} (前月比)</div>` : ""}
-                ${igCur.username ? `<div class="text-[10px] text-gray-400 mt-0.5"><a href="https://www.instagram.com/${igCur.username}/" target="_blank" class="hover:underline">@${igCur.username}</a></div>` : ""}
+                ${igCur.username ? `<div class="text-[10px] text-gray-400 mt-1"><a href="https://www.instagram.com/${igCur.username}/" target="_blank" class="hover:underline">@${igCur.username}</a></div>` : ""}
               </div>
             </div>
             ${topReviews.length ? `<div class="border-t border-gray-100 pt-3">
-              <div class="text-[11px] text-gray-500 mb-2 font-semibold">最近の口コミ ${topReviews.length}件</div>
+              <div class="flex items-center gap-1.5 mb-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style="background:#EA5550">HPB</span>
+                <span class="text-[11px] font-semibold text-gray-700">最近の口コミ ${topReviews.length}件</span>
+              </div>
               <div class="space-y-2">${topReviews.map(rv => `
                 <div class="text-[11px] bg-gray-50 rounded p-2">
                   <div class="flex items-center gap-2">
