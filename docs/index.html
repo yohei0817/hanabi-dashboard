@@ -456,7 +456,8 @@
     <div class="grid lg:grid-cols-2 gap-3 mb-5">
       <div class="card p-5">
         <h3 class="section-title mb-3">店舗別 売上構成比 <span class="section-sub">当月</span></h3>
-        <div style="height:240px"><canvas id="mgmtCompositionChart"></canvas></div>
+        <div style="height:220px"><canvas id="mgmtCompositionChart"></canvas></div>
+        <div class="mt-3 space-y-2" id="mgmtCompositionDetails"></div>
       </div>
       <div class="card p-5">
         <h3 class="section-title mb-3">店舗 ライフサイクル <span class="section-sub">開店からの経過月数</span></h3>
@@ -3889,6 +3890,52 @@ function renderManagementTab() {
     });
   }
 
+  // 店舗別 売上構成比 詳細リスト (ドーナツの下に補足情報)
+  const compDetailsEl = document.getElementById("mgmtCompositionDetails");
+  if (compDetailsEl) {
+    const totalSales = SCOPE.storeRows.reduce((a, r) => a + r.sales, 0);
+    const totalCust = SCOPE.storeRows.reduce((a, r) => a + r.customers, 0);
+    const totalTarget = SCOPE.storeRows.reduce((a, r) => a + (r.monthlyTarget || 0), 0);
+    compDetailsEl.innerHTML = SCOPE.storeRows.map(r => {
+      const color = r.sid === "miyakojima" ? "#D63384" : "#1E88E5";
+      const pct = totalSales ? (r.sales / totalSales * 100) : 0;
+      const custPct = totalCust ? (r.customers / totalCust * 100) : 0;
+      const monthPct = r.monthlyTarget ? (r.sales / r.monthlyTarget * 100) : 0;
+      const monthPctCls = monthPct >= 100 ? "pct-good" : monthPct >= 80 ? "pct-warn" : "pct-bad";
+      return `<div class="rounded-lg border border-gray-100 p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${color}"></span>
+          <span class="font-semibold text-sm flex-1 truncate">${r.store.name}</span>
+          <span class="kpi-num text-base font-bold">${pct.toFixed(1)}<span class="text-xs text-gray-400">%</span></span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[11px]">
+          <div>
+            <div class="text-gray-500">売上</div>
+            <div class="kpi-num font-semibold text-gray-900">${fmt(r.sales)}</div>
+          </div>
+          <div>
+            <div class="text-gray-500">客数 ${custPct.toFixed(1)}%</div>
+            <div class="kpi-num font-semibold text-gray-900">${fmtN(r.customers)}人</div>
+          </div>
+          <div>
+            <div class="text-gray-500">月達成</div>
+            <div class="kpi-num font-semibold ${monthPctCls}">${monthPct.toFixed(1)}%</div>
+          </div>
+        </div>
+      </div>`;
+    }).join("") + `
+      <div class="rounded-lg bg-gray-50 p-3 border border-gray-200">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-bold text-sm text-gray-700">全社合計</span>
+          <span class="kpi-num text-lg font-bold">${fmt(totalSales)}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div><span class="text-gray-500">客数</span> <span class="kpi-num font-semibold ml-1">${fmtN(totalCust)}人</span></div>
+          <div><span class="text-gray-500">月予算</span> <span class="kpi-num font-semibold ml-1">${fmt(totalTarget)}</span></div>
+        </div>
+      </div>`;
+  }
+
   // ライフサイクルリスト (開店から経過月数)
   const lifecycleEl = document.getElementById("mgmtLifecycleList");
   if (lifecycleEl) {
@@ -4442,6 +4489,40 @@ function renderCustomersSubtab(subtab) {
         </div>`;
       }
       const sampleRow = rows[0];
+      // cells 配列の生データ (DOM fallback) は未対応扱いに
+      const isRawCells = sampleRow && Object.keys(sampleRow).length === 1 && Array.isArray(sampleRow.cells);
+      // 有意な値があるかチェック (合計 0 行のみ、 empty 等を判別)
+      let hasMeaningfulData = false;
+      if (isRawCells) {
+        // すべての値が空/0 ならデータ実質なし
+        for (const r of rows) {
+          for (const c of (r.cells || [])) {
+            if (c && c !== "" && c !== "0" && c !== "0.0" && c !== "0.0%" && c !== "合計") {
+              hasMeaningfulData = true; break;
+            }
+          }
+          if (hasMeaningfulData) break;
+        }
+      } else {
+        hasMeaningfulData = true;
+      }
+
+      if (isRawCells || !hasMeaningfulData) {
+        // 未対応 or 空データ → ガイド表示
+        return `<div class="card overflow-hidden">
+          <div class="${headerCls} text-white px-4 py-3 font-bold">${store.name}</div>
+          <div class="p-6 text-center">
+            <div class="text-2xl mb-2 opacity-40">📊</div>
+            <div class="text-sm text-gray-600 font-semibold mb-1">レポート個別最適化 未対応</div>
+            <div class="text-[11px] text-gray-500 leading-relaxed">
+              現在 scrape_jouhou.py は generic 取得のみ。<br>
+              ${activeTab === "_default" ? "「" + (info?.name || "このレポート") + "」 " : "サブタブ 「" + activeTab + "」 "}は 専用 parser 未実装のため <br>意味あるデータが取れていません。<br>
+              <span class="text-[10px] text-gray-400 inline-block mt-2">scrape結果: ${rows.length}行 (cells配列形式)</span>
+            </div>
+          </div>
+        </div>`;
+      }
+
       const keys = Object.keys(sampleRow).filter(k => k !== "_id" && k !== "_index");
       return `<div class="card overflow-hidden">
         <div class="${headerCls} text-white px-4 py-3 font-bold flex justify-between items-center">
