@@ -1765,9 +1765,14 @@ function renderMenuTab() {
   if (availableFY26.length || "202605MTD" in menuData) {
     optionList.push({ value: "FY26_total", label: "FY26 通年 (進行中)" });
   }
-  // 単月: 直近月から逆順 (FY26のもののみ)
-  for (const m of [...availableFY26].reverse()) {
-    optionList.push({ value: m, label: `${m.slice(0,4)}年${parseInt(m.slice(4,6),10)}月` });
+  // 月別: data に存在する全ての YYYYMM key を 新しい順にリスト
+  const monthlyKeys = Object.keys(menuData)
+    .filter(k => /^\d{6}$/.test(k))
+    .sort((a, b) => b.localeCompare(a));  // newest first
+  for (const m of monthlyKeys) {
+    const y = m.slice(0, 4);
+    const mo = parseInt(m.slice(4, 6), 10);
+    optionList.push({ value: m, label: `${y}年${mo}月` });
   }
 
   if (!periodSel.children.length) {
