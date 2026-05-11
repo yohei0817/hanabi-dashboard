@@ -139,61 +139,107 @@ def scrape_hotpepper(page, url: str) -> dict:
 
 def scrape_instagram(page, url: str) -> dict:
     """Instagram の公開プロフィールページから フォロワー数 / 投稿数 を取得。
-    Note: Instagram は bot 検出が厳しい。 公開HTMLの og:description / meta description /
-    本文中の数値 から フォロワー数取得を試みる。
+    Note: Instagram は React + login modal で bot 検出が厳しい。
+    複数の方法で取得を試みる:
+      1. ページ全体のテキストから '投稿 X件' 'フォロワー X' 'フォロー中 X' を正規表現で
+      2. meta description の英語/日本語パターン
+      3. JSON-LD / __NEXT_DATA__ から構造化データ取得
     """
     page.goto(url, wait_until="domcontentloaded")
-    time.sleep(4)
+    time.sleep(5)  # React render 待ち
+    # 登録モーダルを Esc で閉じる試み (ボディテキストが隠れる対策)
+    try:
+        page.keyboard.press("Escape")
+        time.sleep(1)
+    except Exception:
+        pass
     return page.evaluate(r"""
         () => {
             const out = {};
-            // username
             const url = location.pathname;
-            const m = url.match(/^\/([^\/]+)/);
-            if (m) out.username = m[1];
-            // 1) meta description (英語): "456 Followers, 123 Following, 789 Posts"
-            // 2) meta og:description (日本語版あり): "フォロワー456人 ..."
+            const um = url.match(/^\/([^\/]+)/);
+            if (um) out.username = um[1];
+
+            const parseNum = s => {
+                if (s == null) return null;
+                s = String(s).replace(/[,，]/g, '').trim();
+                let mult = 1;
+                if (/k$/i.test(s)) { mult = 1000; s = s.replace(/k$/i, ''); }
+                else if (/m$/i.test(s)) { mult = 1000000; s = s.replace(/m$/i, ''); }
+                else if (s.endsWith('万')) { mult = 10000; s = s.replace('万', ''); }
+                else if (s.endsWith('千')) { mult = 1000; s = s.replace('千', ''); }
+                const n = parseFloat(s);
+                return isNaN(n) ? null : Math.round(n * mult);
+            };
+
+            // === Method 1: ページ全体のテキストから検索 ===
+            // 日本語UI例: '投稿 675件' 'フォロワー 1,442人' 'フォロー中 939人'
+            // 数値は連続したスペース/カンマ含む '1,442' などをマッチ
+            const fullText = document.body.innerText || '';
+            // 投稿数: '投稿 数' / '数 件の投稿' / 'Posts 数'
+            let m;
+            if ((m = fullText.match(/(?:^|\s|\n)投稿[\s　]+([\d,\.]+[万千KMkm]?)/))) out.posts = parseNum(m[1]);
+            else if ((m = fullText.match(/([\d,\.]+[万千]?)\s*件の投稿/))) out.posts = parseNum(m[1]);
+            else if ((m = fullText.match(/([\d,\.]+[KMkm]?)\s*posts?/i))) out.posts = parseNum(m[1]);
+            // フォロワー
+            if ((m = fullText.match(/フォロワー[\s　]+([\d,\.]+[万千KMkm]?)/))) out.followers = parseNum(m[1]);
+            else if ((m = fullText.match(/([\d,\.]+[KMkm]?)\s*followers?/i))) out.followers = parseNum(m[1]);
+            // フォロー中
+            if ((m = fullText.match(/フォロー中[\s　]+([\d,\.]+[万千KMkm]?)/))) out.following = parseNum(m[1]);
+            else if ((m = fullText.match(/([\d,\.]+[KMkm]?)\s*following/i))) out.following = parseNum(m[1]);
+
+            // === Method 2: meta description (og:description が最も確実) ===
+            // 例: 'フォロワー1,443人、フォロー中948人、投稿671件 ― ...'
             const metas = document.querySelectorAll('meta[name="description"], meta[property="og:description"]');
             for (const meta of metas) {
                 const c = meta.getAttribute('content') || '';
-                // 英語パターン
+                // 日本語: 'フォロワー1,443人' '投稿671件' (カンマOK)
+                const folJa = c.match(/フォロワー([\d,\.]+[万千KMkm]?)/);
+                const fwgJa = c.match(/フォロー中([\d,\.]+[万千KMkm]?)/);
+                const postJa = c.match(/投稿([\d,\.]+[万千KMkm]?)\s*件/);
+                // 英語: 'X Followers'
                 const folEn = c.match(/([\d,\.]+[KMkm]?)\s*Followers?/i);
                 const fwgEn = c.match(/([\d,\.]+[KMkm]?)\s*Following/i);
                 const postEn = c.match(/([\d,\.]+[KMkm]?)\s*Posts?/i);
-                // 日本語パターン (人/件)
-                const folJa = c.match(/フォロワー(\d+\.?\d*[万千]?)/);
-                const fwgJa = c.match(/フォロー中(\d+\.?\d*[万千]?)/);
-                const postJa = c.match(/(\d+\.?\d*[万千]?)\s*件の投稿/);
-                const parseNum = s => {
-                    if (!s) return null;
-                    s = s.replace(/,/g, '').trim();
-                    let mult = 1;
-                    if (/k$/i.test(s)) { mult = 1000; s = s.replace(/k$/i, ''); }
-                    else if (/m$/i.test(s)) { mult = 1000000; s = s.replace(/m$/i, ''); }
-                    else if (s.endsWith('万')) { mult = 10000; s = s.replace('万', ''); }
-                    else if (s.endsWith('千')) { mult = 1000; s = s.replace('千', ''); }
-                    const n = parseFloat(s);
-                    return isNaN(n) ? null : Math.round(n * mult);
-                };
-                if (!out.followers && (folEn || folJa)) out.followers = parseNum((folEn || folJa)[1]);
-                if (!out.following && (fwgEn || fwgJa)) out.following = parseNum((fwgEn || fwgJa)[1]);
-                if (!out.posts && (postEn || postJa)) out.posts = parseNum((postEn || postJa)[1]);
+                if (!out.followers && (folJa || folEn)) out.followers = parseNum((folJa || folEn)[1]);
+                if (!out.following && (fwgJa || fwgEn)) out.following = parseNum((fwgJa || fwgEn)[1]);
+                if (!out.posts && (postJa || postEn)) out.posts = parseNum((postJa || postEn)[1]);
+                if (out.followers) break;
             }
-            // meta の値が取れなかった場合 ページのDOM内 (header section の数値) を試す
+            // === Method 2b: title attribute (IG はホバー時の正確な数値を title 属性に持つ) ===
             if (!out.followers) {
-                const lis = document.querySelectorAll('header ul li, header section li');
-                for (const li of lis) {
-                    const txt = li.innerText || '';
-                    const m = txt.match(/([\d,\.]+[KMkm万千]?)\s*(?:followers?|フォロワー)/i);
-                    if (m) {
-                        const s = m[1].replace(/,/g, '');
-                        let mult = 1, val = s;
-                        if (/k$/i.test(s)) { mult = 1000; val = s.replace(/k$/i, ''); }
-                        else if (s.endsWith('万')) { mult = 10000; val = s.replace('万', ''); }
-                        const n = parseFloat(val);
-                        if (!isNaN(n)) { out.followers = Math.round(n * mult); break; }
+                // 要素のテキストかaria-labelに 'フォロワー' or 'followers' が含まれる近接要素を探す
+                const allEls = document.querySelectorAll('[title]');
+                const stats = [];
+                for (const el of allEls) {
+                    const t = el.getAttribute('title') || '';
+                    if (/^[\d,]+$/.test(t)) {
+                        const parent = el.closest('a, span, li');
+                        const ctx = (parent ? parent.innerText : el.innerText) || '';
+                        stats.push({ value: parseInt(t.replace(/,/g, '')), context: ctx });
                     }
                 }
+                // 一番目の数値を followers と仮定 (IG headerの並び: 投稿 / フォロワー / フォロー中)
+                // ただし context に 'フォロワー' があれば優先
+                const followerStat = stats.find(s => /フォロワー|followers?/i.test(s.context));
+                if (followerStat) out.followers = followerStat.value;
+            }
+
+            // === Method 3: __NEXT_DATA__ / JSON データから ===
+            if (!out.followers) {
+                try {
+                    const nextEl = document.getElementById('__NEXT_DATA__');
+                    if (nextEl) {
+                        const data = JSON.parse(nextEl.textContent || '{}');
+                        const sjson = JSON.stringify(data);
+                        const fol = sjson.match(/"edge_followed_by":{"count":(\d+)}/);
+                        const fwg = sjson.match(/"edge_follow":{"count":(\d+)}/);
+                        const post = sjson.match(/"edge_owner_to_timeline_media":{"count":(\d+)/);
+                        if (fol) out.followers = parseInt(fol[1]);
+                        if (fwg) out.following = parseInt(fwg[1]);
+                        if (post) out.posts = parseInt(post[1]);
+                    }
+                } catch (e) {}
             }
             return out;
         }

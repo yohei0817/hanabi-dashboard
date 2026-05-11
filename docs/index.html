@@ -3961,7 +3961,7 @@ function renderManagementTab() {
           <div class="p-4">
             <div class="grid grid-cols-2 gap-3 text-sm mb-3">
               <div>
-                <div class="text-[11px] text-gray-500">HotPepper 評価${listings.length > 1 ? ` (${listings.length}件平均)` : ""}</div>
+                <div class="text-[11px] text-gray-500">HotPepper 評価${listings.length > 1 ? ` (${listings.length}ページ平均)` : ""}</div>
                 <div class="mt-1">${renderStars(displayRating, { size: "1.3em" })}</div>
                 <div class="text-[11px] text-gray-500 mt-1.5">${displayReviewCount != null ? "口コミ " + displayReviewCount + "件" : "口コミ —"} ${reviewDelta != null && reviewDelta > 0 ? `<span class="text-green-600">+${reviewDelta}</span>` : ""}</div>
                 ${ratingDelta != null && parseFloat(ratingDelta) !== 0 ? `<div class="text-[10px] mt-0.5" style="color:${parseFloat(ratingDelta) >= 0 ? '#10B981' : '#DC2626'}">${parseFloat(ratingDelta) >= 0 ? '+' : ''}${ratingDelta} (前回比)</div>` : ""}
