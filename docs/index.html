@@ -155,6 +155,7 @@
       <span class="text-[11px] tracking-wider text-gray-500 border border-gray-700 rounded px-2 py-0.5 whitespace-nowrap hidden md:inline">数値はすべて税抜</span>
       <select id="monthSelect" class="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs sm:text-sm"></select>
       <button id="printBtn" class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1 hidden sm:inline-block" title="サマリーを印刷 (A4 1枚)">印刷</button>
+      <button id="ghTokenBtn" class="hidden text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1" title="GitHub 直接書き込み設定">GH</button>
       <span id="roleBadge" class="text-xs px-2 py-0.5 rounded border border-gray-600 text-gray-300 hidden sm:inline">…</span>
       <button id="logoutBtn" class="text-xs text-gray-400 hover:text-white">切替</button>
     </div>
@@ -449,6 +450,38 @@
   </div>
 
   <!-- Recruit candidate modal -->
+  <!-- GitHub token modal -->
+  <div id="ghTokenModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+      <div class="border-b border-gray-200 px-5 py-3 flex items-center justify-between">
+        <h3 class="font-bold">GitHub 直接書き込み設定</h3>
+        <button id="ghTokenClose" class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-3 text-sm">
+        <div id="ghTokenStatus" class="px-3 py-2 rounded bg-gray-100 text-xs"></div>
+        <div class="text-xs text-gray-600 leading-relaxed">
+          採用候補者などの編集を GitHub に直接反映するためのトークンです。
+          設定すると麗花さん含む全員がブラウザだけで完結できるようになります。
+        </div>
+        <label class="block">
+          <span class="text-xs text-gray-600">Personal Access Token <span class="text-red-500">*</span></span>
+          <input type="password" id="ghTokenInput" placeholder="github_pat_..." class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1 font-mono text-xs" />
+        </label>
+        <div class="text-[11px] text-gray-500 leading-relaxed bg-yellow-50 border-l-4 border-yellow-300 px-3 py-2">
+          <strong>トークン発行方法:</strong> GitHub 右上アバター → Settings → Developer settings → Personal access tokens (classic) → Generate new token →
+          スコープ <code class="bg-white px-1 rounded">repo</code> にチェック → 期限を設定 → 発行
+        </div>
+        <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+          <button id="ghTokenClear" class="text-xs text-red-600 hover:text-red-800 underline">トークン削除</button>
+          <div class="flex gap-2">
+            <button id="ghTokenCancel" class="text-xs border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50">キャンセル</button>
+            <button id="ghTokenSave" class="text-xs bg-black text-white rounded px-4 py-1.5 hover:bg-gray-800">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="recruitModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
       <div class="border-b border-gray-200 px-5 py-3 flex items-center justify-between sticky top-0 bg-white z-10">
@@ -549,7 +582,73 @@ function setAuthenticated(role) {
   localStorage.setItem("hanabi_session", JSON.stringify(session));
   roleBadge.textContent = ROLE_LABEL[role] || role;
   overlay.classList.add("hidden");
+  // Show GitHub token button for master
+  const ghBtn = document.getElementById("ghTokenBtn");
+  if (ghBtn) {
+    ghBtn.classList.toggle("hidden", role !== "master");
+    updateGhTokenButtonStyle();
+  }
   loadData();
+}
+
+// === GitHub direct write (master only) ===
+// Salon-dashboard parity: paste PAT once → recruitment changes auto-push to GitHub
+const GH_REPO = "hanabi-board/hanabi-dashboard";
+const GH_TOKEN_KEY = "hanabi_gh_token_v1";
+function getGhToken() { return localStorage.getItem(GH_TOKEN_KEY) || null; }
+function setGhToken(t) { if (t) localStorage.setItem(GH_TOKEN_KEY, t); else localStorage.removeItem(GH_TOKEN_KEY); updateGhTokenButtonStyle(); }
+function updateGhTokenButtonStyle() {
+  const btn = document.getElementById("ghTokenBtn");
+  if (!btn) return;
+  const connected = !!getGhToken();
+  btn.textContent = connected ? "GH ●" : "GH";
+  btn.title = connected ? "GitHub接続済 (クリックで設定/削除)" : "GitHub未接続 (クリックで設定)";
+  btn.style.color = connected ? "#10B981" : "";
+  btn.style.borderColor = connected ? "#10B981" : "";
+}
+function showToast(msg, kind = "info") {
+  const colors = { info: "#3B82F6", good: "#10B981", error: "#DC2626", warn: "#F59E0B" };
+  const t = document.createElement("div");
+  t.style.cssText = `position:fixed;top:60px;right:20px;background:${colors[kind]};color:white;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.2);max-width:400px;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), kind === "error" ? 5000 : 2500);
+}
+
+async function pushJsonToGitHub(path, jsonObject, commitMessage) {
+  const token = getGhToken();
+  if (!token) throw new Error("GitHub トークン未設定");
+  const apiUrl = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+  // 1. fetch current SHA
+  let sha = "";
+  try {
+    const r = await fetch(apiUrl, { headers: { Authorization: "token " + token, Accept: "application/vnd.github.v3+json" } });
+    if (r.ok) { const d = await r.json(); sha = d.sha; }
+  } catch (e) {}
+  // 2. PUT
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(jsonObject, null, 2))));
+  const body = { message: commitMessage, content };
+  if (sha) body.sha = sha;
+  const r = await fetch(apiUrl, {
+    method: "PUT",
+    headers: { Authorization: "token " + token, Accept: "application/vnd.github.v3+json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const err = await r.text();
+    throw new Error(`GitHub push failed: ${r.status} ${err.slice(0, 200)}`);
+  }
+  return r.json();
+}
+
+// GitHub から最新の recruitment.json を取得して上書き (page load 時)
+async function fetchRemoteRecruitment() {
+  try {
+    const url = `https://raw.githubusercontent.com/${GH_REPO}/main/data/recruitment.json?ts=${Date.now()}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
 }
 
 function isSessionValid() {
@@ -673,6 +772,21 @@ async function loadData() {
   render(d.latest_month);
   const savedTab = localStorage.getItem("hanabi_tab") || "summary";
   activateTab(savedTab);
+
+  // Background: fetch latest recruitment.json from GitHub raw to catch edits made by others
+  // (data.json is regenerated daily; this picks up same-day edits)
+  setTimeout(async () => {
+    const remote = await fetchRemoteRecruitment();
+    if (!remote) return;
+    const localStr = JSON.stringify(DATA.recruitment || {});
+    const remoteStr = JSON.stringify(remote);
+    if (localStr === remoteStr) return;  // no change
+    DATA.recruitment = remote;
+    mergeLocalRecruitOverrides();
+    if (document.querySelector('[data-panel="recruit"].active')) {
+      renderRecruitTab();
+    }
+  }, 1500);
 }
 
 function computeScope(month) {
@@ -1688,7 +1802,7 @@ function openRecruitModal(id) {
 function closeRecruitModal() {
   document.getElementById("recruitModal").classList.add("hidden");
 }
-function saveRecruitForm(e) {
+async function saveRecruitForm(e) {
   e.preventDefault();
   if (currentRole !== "master") return;
   const id = document.getElementById("rf_id").value || ("c_" + Date.now().toString(36) + Math.random().toString(36).slice(2,6));
@@ -1705,27 +1819,63 @@ function saveRecruitForm(e) {
     notes: document.getElementById("rf_notes").value.trim(),
   };
   if (!candidate.name || !candidate.applied_date || !candidate.status) return;
+  // Optimistic UI: save to localStorage + DATA immediately
   const o = _loadRecruitOverrides();
   o[id] = candidate;
   _saveRecruitOverrides(o);
-  // Update DATA in-memory
   const list = DATA.recruitment.candidates = DATA.recruitment.candidates || [];
   const idx = list.findIndex(c => c.id === id);
   if (idx >= 0) list[idx] = candidate; else list.push(candidate);
   closeRecruitModal();
   renderRecruitTab();
+  // Try to push to GitHub if token configured
+  if (getGhToken()) {
+    showToast("保存中 → GitHubに反映...", "info");
+    try {
+      // Build clean recruitment.json from DATA.recruitment (drop any null-marked deletions)
+      const cleaned = { ...DATA.recruitment };
+      cleaned.candidates = (cleaned.candidates || []).filter(c => c);
+      await pushJsonToGitHub("data/recruitment.json", cleaned, `Update recruitment.json (${candidate.name})`);
+      // Success → clear this entry's override (it's now in the canonical file)
+      const o2 = _loadRecruitOverrides();
+      delete o2[id];
+      _saveRecruitOverrides(o2);
+      showToast("✓ GitHub反映成功 (1-3分で全員に表示)", "good");
+    } catch (err) {
+      showToast("⚠️ GitHub反映失敗: " + err.message + " (ローカル保存は維持)", "error");
+    }
+  } else {
+    showToast("✓ 保存しました (ローカルのみ — GitHubトークン未設定)", "warn");
+  }
 }
-function deleteRecruitCurrent() {
+async function deleteRecruitCurrent() {
   if (currentRole !== "master") return;
   const id = document.getElementById("rf_id").value;
   if (!id) return;
   if (!confirm("この候補者を削除しますか？")) return;
+  const deletedName = (DATA.recruitment.candidates || []).find(c => c.id === id)?.name || "(名前不明)";
   const o = _loadRecruitOverrides();
   o[id] = "__deleted__";
   _saveRecruitOverrides(o);
   DATA.recruitment.candidates = (DATA.recruitment.candidates || []).filter(c => c.id !== id);
   closeRecruitModal();
   renderRecruitTab();
+  if (getGhToken()) {
+    showToast("削除中 → GitHubに反映...", "info");
+    try {
+      const cleaned = { ...DATA.recruitment };
+      cleaned.candidates = (cleaned.candidates || []).filter(c => c);
+      await pushJsonToGitHub("data/recruitment.json", cleaned, `Delete candidate (${deletedName})`);
+      const o2 = _loadRecruitOverrides();
+      delete o2[id];  // override no longer needed
+      _saveRecruitOverrides(o2);
+      showToast("✓ GitHub反映成功", "good");
+    } catch (err) {
+      showToast("⚠️ GitHub反映失敗: " + err.message, "error");
+    }
+  } else {
+    showToast("✓ 削除しました (ローカルのみ)", "warn");
+  }
 }
 function exportRecruitJson() {
   if (currentRole !== "master") return;
@@ -1750,6 +1900,58 @@ document.addEventListener("DOMContentLoaded", () => {
   if (del) del.addEventListener("click", deleteRecruitCurrent);
   const modal = document.getElementById("recruitModal");
   if (modal) modal.addEventListener("click", (e) => { if (e.target === modal) closeRecruitModal(); });
+
+  // GitHub token modal wiring
+  const ghBtn = document.getElementById("ghTokenBtn");
+  const ghModal = document.getElementById("ghTokenModal");
+  const openGhModal = () => {
+    if (!ghModal) return;
+    const cur = getGhToken();
+    document.getElementById("ghTokenInput").value = "";  // never display existing token
+    document.getElementById("ghTokenStatus").innerHTML = cur
+      ? `<span style="color:#10B981">✓ 接続済</span> · 末尾 4文字: <code class="bg-white px-1 rounded">…${cur.slice(-4)}</code>`
+      : `<span style="color:#9CA3AF">未接続</span> · トークンを設定すると採用編集が GitHub に自動反映`;
+    document.getElementById("ghTokenClear").style.display = cur ? "" : "none";
+    ghModal.classList.remove("hidden");
+  };
+  const closeGhModal = () => ghModal && ghModal.classList.add("hidden");
+  if (ghBtn) ghBtn.addEventListener("click", openGhModal);
+  const ghClose = document.getElementById("ghTokenClose");
+  if (ghClose) ghClose.addEventListener("click", closeGhModal);
+  const ghCancel = document.getElementById("ghTokenCancel");
+  if (ghCancel) ghCancel.addEventListener("click", closeGhModal);
+  const ghClear = document.getElementById("ghTokenClear");
+  if (ghClear) ghClear.addEventListener("click", () => {
+    if (!confirm("GitHub トークンを削除しますか？\n以後、 採用編集はローカル保存のみになります。")) return;
+    setGhToken(null);
+    closeGhModal();
+    showToast("GitHub トークン削除しました", "info");
+  });
+  const ghSave = document.getElementById("ghTokenSave");
+  if (ghSave) ghSave.addEventListener("click", async () => {
+    const val = document.getElementById("ghTokenInput").value.trim();
+    if (!val) return;
+    if (!val.startsWith("ghp_") && !val.startsWith("github_pat_")) {
+      if (!confirm("Personal Access Token は通常 'ghp_' か 'github_pat_' で始まります。\n本当にこのトークンで保存しますか？")) return;
+    }
+    // Validate by making a GET to repo
+    try {
+      const r = await fetch(`https://api.github.com/repos/${GH_REPO}`, {
+        headers: { Authorization: "token " + val, Accept: "application/vnd.github.v3+json" }
+      });
+      if (!r.ok) {
+        showToast(`⚠️ トークン検証失敗 (HTTP ${r.status}) — repo権限/トークン正しいか確認してください`, "error");
+        return;
+      }
+    } catch (e) {
+      showToast("⚠️ ネットワークエラー: " + e.message, "error");
+      return;
+    }
+    setGhToken(val);
+    closeGhModal();
+    showToast("✓ GitHub トークン保存完了 · 採用編集が自動反映されるようになりました", "good");
+  });
+  if (ghModal) ghModal.addEventListener("click", (e) => { if (e.target === ghModal) closeGhModal(); });
 });
 
 function deptOfCategory(cat) {
