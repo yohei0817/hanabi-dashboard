@@ -5,7 +5,58 @@
     "photo": "(filename in docs/assets/staff/, e.g. '渡辺.jpg')",
     "display_name": "(optional override, e.g. 'マサヤ')",
     "joined": "YYYY-MM-DD",
+    "retired": "YYYY-MM-DD (退職日, 任意)",
     "role": "店長 / トップ / etc"
   },
-  "profiles": {}
+  "profiles": {
+    "渡辺 真也": {
+      "display_name": "渡辺",
+      "photo": "渡辺_真也.jpg"
+    },
+    "名嘉眞 美里": {
+      "display_name": "名嘉眞",
+      "photo": "名嘉眞_美里.jpg"
+    },
+    "馬場 美沙紀": {
+      "display_name": "馬場",
+      "photo": "馬場_美沙紀.jpg"
+    },
+    "水野 友里": {
+      "display_name": "水野",
+      "photo": "水野_友里.jpg"
+    },
+    "佐久間 理加": {
+      "display_name": "佐久間",
+      "photo": "佐久間_理加.jpg"
+    },
+    "山尾 奈穂": {
+      "display_name": "山尾",
+      "photo": "山尾_奈穂.jpg"
+    },
+    "一宮 有澄": {
+      "display_name": "一宮",
+      "photo": "一宮_有澄.jpg"
+    },
+    "宮里 乃の子": {
+      "display_name": "宮里",
+      "photo": "宮里_乃の子.jpg"
+    },
+    "ふせ ほのか": {
+      "display_name": "ふせほのか",
+      "photo": "ふせほのか.jpg",
+      "retired": "2024-07-01",
+      "_note": "綱島ヘア、 退職済 (CSV最終 202406)。 退職日は推定値"
+    },
+    "小栗 麻衣": {
+      "display_name": "小栗",
+      "photo": "小栗.jpg",
+      "retired": "2025-04-01",
+      "_note": "綱島ヘア、 退職済 (CSV最終 202503)。 退職日は推定値"
+    },
+    "KAMA": {
+      "display_name": "KAMA",
+      "photo": "KAMA.jpg",
+      "_note": "CSV未登録 — 新人 or 入社予定? 水野さんに要確認"
+    }
+  }
 }
