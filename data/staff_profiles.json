@@ -52,8 +52,11 @@
       "role": "管理者（アイ＆ネイル）"
     },
     "一宮 有澄": {
-      "display_name": "一宮",
-      "photo": "一宮_有澄.jpg"
+      "photo": "一宮_有澄.jpg",
+      "display_name": "ありす",
+      "kana": "イチミヤ アリス",
+      "joined": "0006-11-04",
+      "role": "ネイリスト"
     },
     "宮里 乃の子": {
       "display_name": "宮里",
