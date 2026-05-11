@@ -854,6 +854,13 @@ const fmt = n => "¥" + Math.round(n||0).toLocaleString();
 const fmtN = n => (n||0).toLocaleString();
 const fmtK = n => "¥" + Math.round((n||0)/1000).toLocaleString() + "K";
 const fmtM = n => "¥" + ((n||0)/1000000).toFixed(1) + "M";
+// 万円単位 (スタッフ実績テーブル用) — 数字が直感的に読める
+// 例: ¥438,821 → '44万' / ¥1,234,567 → '123万'
+const fmtMan = n => {
+  const v = Math.round((n||0) / 10000);
+  if (v === 0 && (n||0) > 0) return "<1万";
+  return v.toLocaleString() + "万";
+};
 const pctClass = p => p >= 100 ? "pct-good" : p >= 80 ? "pct-warn" : "pct-bad";
 const pctColor = p => p >= 100 ? "var(--accent-green)" : p >= 80 ? "var(--accent-yellow)" : "var(--accent-red)";
 const badgeCls = p => p >= 100 ? "badge-good" : p >= 80 ? "badge-warn" : "badge-bad";
@@ -3695,51 +3702,68 @@ function staffAvatar(s, size = 24) {
 
 function rankTable(rows, sortKey) {
   const rankCls = i => i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "text-gray-500";
-  // 各row に指名比率を動的計算で付与
+  // 各row に指名比率を動的計算で付与 — 指名客数 / 総来店客数 ベース (来店者の割合)
   const enriched = rows.map(s => {
     const nom = s.tech_customers_nominated || 0;
-    const tot = s.tech_customers || 0;
-    return { ...s, nomination_rate: tot > 0 ? (nom / tot * 100) : 0 };
+    const totalCust = s.customers || 0;
+    return { ...s, nomination_rate: totalCust > 0 ? (nom / totalCust * 100) : 0 };
   });
   const sorted = [...enriched].sort((a,b) => (b[sortKey]||0) - (a[sortKey]||0));
-  const isCount = key => ["customers","tech_customers_nominated"].includes(key);
-  const isPct = key => ["nomination_rate"].includes(key);
-  const valFmt = (s, key) => isPct(key) ? (s[key] || 0).toFixed(1) + "%" : isCount(key) ? fmtN(s[key]||0) : fmt(s[key]||0);
-  // Highlight column header for active sort
+  // 売上系: 万円表記 (44万)、 客数系: 件数、 指名比率: %、 客単価: 円
+  const moneyCols = new Set(["total_sales","tech_sales","tech_sales_nominated","shop_sales"]);
+  const countCols = new Set(["customers","tech_customers_nominated"]);
+  const valFmt = (s, key) => {
+    if (key === "nomination_rate") return (s[key] || 0).toFixed(1) + "%";
+    if (key === "spend_per_customer") return fmt(s[key] || 0);
+    if (moneyCols.has(key)) return fmtMan(s[key] || 0);
+    if (countCols.has(key)) return fmtN(s[key] || 0);
+    return s[key] || 0;
+  };
   const colCls = key => key === sortKey ? "text-gray-900 font-semibold" : "text-gray-500 font-medium";
-  return `<table class="w-full text-sm" style="min-width:760px">
+  return `<table class="w-full" style="min-width:780px">
     <thead class="text-xs">
       <tr class="border-row">
-        <th class="text-left py-2 pr-2 ${colCls('rank')} w-8">#</th>
-        <th class="text-left py-2 pr-2 font-medium text-gray-500">スタッフ</th>
-        <th class="text-left py-2 pr-2 font-medium text-gray-500">部門</th>
-        <th class="text-right py-2 px-2 ${colCls('total_sales')} whitespace-nowrap">総売上</th>
-        <th class="text-right py-2 px-2 ${colCls('tech_sales')} whitespace-nowrap">技術</th>
-        <th class="text-right py-2 px-2 ${colCls('tech_sales_nominated')} whitespace-nowrap">指名売上</th>
-        <th class="text-right py-2 px-2 ${colCls('shop_sales')} whitespace-nowrap">店販</th>
-        <th class="text-right py-2 px-2 ${colCls('customers')} whitespace-nowrap">客数</th>
-        <th class="text-right py-2 px-2 ${colCls('tech_customers_nominated')} whitespace-nowrap">指名</th>
-        <th class="text-right py-2 px-2 ${colCls('nomination_rate')} whitespace-nowrap">指名比率</th>
-        <th class="text-right py-2 pl-2 ${colCls('spend_per_customer')} whitespace-nowrap">客単価</th>
+        <th class="text-left py-2.5 pr-2 ${colCls('rank')} w-10">#</th>
+        <th class="text-left py-2.5 pr-2 font-medium text-gray-500">スタッフ</th>
+        <th class="text-center py-2.5 px-2 font-medium text-gray-500">部門</th>
+        <th class="text-right py-2.5 px-2 ${colCls('total_sales')} whitespace-nowrap">総売上</th>
+        <th class="text-right py-2.5 px-2 ${colCls('tech_sales')} whitespace-nowrap">技術</th>
+        <th class="text-right py-2.5 px-2 ${colCls('tech_sales_nominated')} whitespace-nowrap">指名売上</th>
+        <th class="text-right py-2.5 px-2 ${colCls('shop_sales')} whitespace-nowrap">店販</th>
+        <th class="text-right py-2.5 px-2 ${colCls('customers')} whitespace-nowrap">客数</th>
+        <th class="text-right py-2.5 px-2 ${colCls('tech_customers_nominated')} whitespace-nowrap">指名</th>
+        <th class="text-right py-2.5 px-2 ${colCls('nomination_rate')} whitespace-nowrap">指名比率</th>
+        <th class="text-right py-2.5 pl-2 ${colCls('spend_per_customer')} whitespace-nowrap">客単価</th>
       </tr>
     </thead>
     <tbody>
       ${sorted.map((s, i) => {
         const deptColor = s.primary_dept === "ヘア" ? "var(--dept-hair)" : s.primary_dept === "アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
-        const cell = (key) => `<td class="py-2 px-2 text-right kpi-num whitespace-nowrap ${key === sortKey ? 'font-bold text-gray-900' : 'text-gray-600'}">${valFmt(s, key)}</td>`;
+        // 総売上は主役: 太字で大きく
+        const primaryCell = (key) => `<td class="py-3 px-2 text-right kpi-num whitespace-nowrap font-bold text-base text-gray-900">${valFmt(s, key)}</td>`;
+        // セカンダリ: 標準サイズで sortKey 時のみ強調
+        const cell = (key) => {
+          const isActive = key === sortKey;
+          const isMoney = moneyCols.has(key);
+          return `<td class="py-3 px-2 text-right kpi-num whitespace-nowrap ${isActive ? 'font-bold text-gray-900' : 'text-gray-600'} ${isMoney ? 'text-sm' : 'text-sm'}">${valFmt(s, key)}</td>`;
+        };
         const editBtn = currentRole === "master"
           ? `<button class="text-gray-300 hover:text-gray-700 ml-1.5 text-xs" title="プロフィール編集" onclick="event.stopPropagation(); openStaffProfileModal('${s.name.replace(/'/g,"\\'")}')">✎</button>`
           : "";
-        return `<tr class="border-row hover:bg-gray-50 cursor-pointer" data-staff-name="${s.name.replace(/"/g,'&quot;')}" data-staff-store="${s.store}" onclick="openStaffDetail(this.dataset.staffStore, this.dataset.staffName)">
-          <td class="py-2 pr-2 rank-num ${rankCls(i)} text-center">${i+1}</td>
-          <td class="py-2 pr-2">
+        // 部門バッジ: より大きく/明確に
+        const deptBadge = `<span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold tracking-wider" style="background:${deptColor}; color:#fff; min-width:52px;">${s.primary_dept}</span>`;
+        // 行の色付け: TOP3 だけ淡くゴールド/シルバー/ブロンズの背景帯
+        const rowBg = i === 0 ? "bg-yellow-50/60" : i === 1 ? "bg-gray-50/80" : i === 2 ? "bg-orange-50/60" : "";
+        return `<tr class="border-row hover:bg-gray-100 cursor-pointer ${rowBg}" data-staff-name="${s.name.replace(/"/g,'&quot;')}" data-staff-store="${s.store}" onclick="openStaffDetail(this.dataset.staffStore, this.dataset.staffName)">
+          <td class="py-3 pr-2 rank-num ${rankCls(i)} text-center text-lg">${i+1}</td>
+          <td class="py-3 pr-2">
             <div class="flex items-center gap-2 min-w-0">
-              ${staffAvatar(s, 28)}
-              <span class="truncate">${s.name}</span>${editBtn}
+              ${staffAvatar(s, 32)}
+              <span class="truncate font-semibold text-sm">${s.name}</span>${editBtn}
             </div>
           </td>
-          <td class="py-2 pr-2"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wider" style="background:${deptColor}; color:#fff; min-width:48px; justify-content:center;">${s.primary_dept}</span></td>
-          ${cell('total_sales')}
+          <td class="py-3 px-2 text-center">${deptBadge}</td>
+          ${primaryCell('total_sales')}
           ${cell('tech_sales')}
           ${cell('tech_sales_nominated')}
           ${cell('shop_sales')}
@@ -4850,33 +4874,38 @@ function openStaffDetail(storeId, staffName) {
       }
     });
   }
-  // Monthly table
-  const tableHtml = `<table class="w-full text-sm" style="min-width:600px">
+  // Monthly table: 万円単位で読みやすく + 当月をハイライト
+  const tableHtml = `<table class="w-full" style="min-width:680px">
     <thead class="text-xs text-gray-500 border-b border-gray-200">
       <tr>
-        <th class="text-left py-2 pr-2">月</th>
-        <th class="text-right py-2 px-2">総売上</th>
-        <th class="text-right py-2 px-2">技術</th>
-        <th class="text-right py-2 px-2">指名売上</th>
-        <th class="text-right py-2 px-2">客数</th>
-        <th class="text-right py-2 px-2">指名客</th>
-        <th class="text-right py-2 px-2">客単価</th>
-        <th class="text-right py-2 px-2">稼働日</th>
+        <th class="text-left py-2.5 pr-2">月</th>
+        <th class="text-right py-2.5 px-2">総売上</th>
+        <th class="text-right py-2.5 px-2">技術</th>
+        <th class="text-right py-2.5 px-2">指名売上</th>
+        <th class="text-right py-2.5 px-2">客数</th>
+        <th class="text-right py-2.5 px-2">指名客</th>
+        <th class="text-right py-2.5 px-2">指名比率</th>
+        <th class="text-right py-2.5 px-2">客単価</th>
+        <th class="text-right py-2.5 px-2">稼働日</th>
       </tr>
     </thead>
     <tbody>${months12.map(m => {
       const r = rowsByMonth[m];
-      if (!r) return `<tr class="text-gray-400 border-b border-gray-50"><td class="py-1.5 pr-2">${m.slice(0,4)}/${m.slice(4,6)}</td><td colspan="7" class="text-center text-xs">データなし</td></tr>`;
-      const fmtY = v => v ? "¥" + (v).toLocaleString() : "—";
-      return `<tr class="border-b border-gray-50 hover:bg-gray-50">
-        <td class="py-1.5 pr-2 text-xs">${m.slice(0,4)}/${m.slice(4,6)}</td>
-        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.total_sales)}</td>
-        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${fmtY(r.tech_sales)}</td>
-        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.tech_sales_nominated)}</td>
-        <td class="py-1.5 px-2 text-right kpi-num">${r.customers || 0}</td>
-        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${r.tech_customers_nominated || 0}</td>
-        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.spend_per_customer)}</td>
-        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${r.work_days || 0}</td>
+      const monthLabel = `${m.slice(0,4)}/${m.slice(4,6)}`;
+      const isCurrent = m === currentMonth;
+      const rowCls = isCurrent ? "bg-blue-50 font-semibold" : "hover:bg-gray-50";
+      if (!r) return `<tr class="text-gray-300 border-b border-gray-50"><td class="py-2 pr-2 text-xs">${monthLabel}</td><td colspan="8" class="text-center text-[11px]">データなし</td></tr>`;
+      const nomRate = r.customers ? ((r.tech_customers_nominated || 0) / r.customers * 100) : 0;
+      return `<tr class="border-b border-gray-50 ${rowCls}">
+        <td class="py-2.5 pr-2 text-xs">${monthLabel}${isCurrent ? ' <span class="text-[10px] text-blue-600 ml-1">当月</span>' : ''}</td>
+        <td class="py-2.5 px-2 text-right kpi-num font-bold text-base text-gray-900">${fmtMan(r.total_sales)}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm text-gray-600">${fmtMan(r.tech_sales)}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm">${fmtMan(r.tech_sales_nominated)}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm">${r.customers || 0}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm text-gray-600">${r.tech_customers_nominated || 0}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm">${nomRate.toFixed(1)}%</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm">${fmt(r.spend_per_customer)}</td>
+        <td class="py-2.5 px-2 text-right kpi-num text-sm text-gray-500">${r.work_days || 0}日</td>
       </tr>`;
     }).join("")}</tbody>
   </table>`;
