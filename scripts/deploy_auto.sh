@@ -35,6 +35,17 @@ trap 'on_error $LINENO' ERR
 
 log "==== HANABI dashboard daily auto-deploy ===="
 
+# 0. 最新リモートを取り込む (ブラウザUI経由の編集を取り逃さないため)
+#    例: 麗花さんが UI から recruitment.json 編集 → push 済の状態から始める
+log "[0/5] git pull --rebase"
+if ! git pull --rebase origin main 2>&1 | tee -a "$LOG_FILE"; then
+  log "❌ git pull failed (リベース衝突の可能性)"
+  notify "HANABI Dashboard 自動更新 失敗" "git pull でリベース失敗。 ローカルに未push commit があるかも"
+  # 強制復旧: rebase abort
+  git rebase --abort 2>/dev/null || true
+  exit 1
+fi
+
 # 1. Uレジから最新CSV DL (current month)
 YM=$(date +%Y%m)
 log "[1/5] Uレジ自動DL ($YM)"
