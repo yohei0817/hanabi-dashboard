@@ -22,8 +22,11 @@
       "photo": "馬場_美沙紀.jpg"
     },
     "水野 友里": {
+      "photo": "水野_友里.jpg",
       "display_name": "水野",
-      "photo": "水野_友里.jpg"
+      "kana": "ミズノユリ",
+      "joined": "2022-03-01",
+      "role": "マネージャー"
     },
     "佐久間 理加": {
       "display_name": "佐久間",
