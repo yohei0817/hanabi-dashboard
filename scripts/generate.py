@@ -380,6 +380,7 @@ def main():
             if report and label and sid:
                 jouhou_data.setdefault(report, {}).setdefault(label, {})[sid] = {
                     "rows": d.get("rows", []),
+                    "by_tab": d.get("by_tab", {}),  # サブタブ別データ
                     "date_from": d.get("date_from"),
                     "date_to": d.get("date_to"),
                     "scraped_at": d.get("scraped_at"),

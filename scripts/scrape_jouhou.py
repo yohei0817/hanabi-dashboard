@@ -133,7 +133,54 @@ def scrape_grid(page) -> dict:
     """)
 
 
-def scrape_one(page, report_type: str, label: str, store_code: str, date_from: str, date_to: str, log_dir: Path) -> list:
+def discover_subtabs(page) -> list[str]:
+    """ページ内のサブタブ (顧客別区分 / 年代別 / 曜日別 等) を検出して名前のリストを返す。"""
+    return page.evaluate("""
+        () => {
+            // 失客/再来店等のレポートに見られるサブタブ群
+            // ボタンorリンクで <a>顧客別区分</a> <a>年代別</a> 等の形
+            const candidates = ['button', 'a', '.tab', '[role=tab]'];
+            const results = [];
+            const known = ['顧客別区分', '年代別', '曜日別', 'メニュー別', '使用金額別', 'エリア別', '部門別'];
+            const seen = new Set();
+            for (const tag of candidates) {
+                document.querySelectorAll(tag).forEach(el => {
+                    const txt = (el.innerText || '').trim();
+                    if (known.includes(txt) && !seen.has(txt) && el.offsetParent) {
+                        seen.add(txt);
+                        results.push(txt);
+                    }
+                });
+            }
+            return results;
+        }
+    """)
+
+
+def click_subtab(page, name: str):
+    """指定したサブタブをクリック。"""
+    return page.evaluate(f"""
+        () => {{
+            const target = '{name}';
+            const candidates = ['button', 'a', '.tab', '[role=tab]'];
+            for (const tag of candidates) {{
+                const els = document.querySelectorAll(tag);
+                for (const el of els) {{
+                    if ((el.innerText || '').trim() === target && el.offsetParent) {{
+                        el.click();
+                        return true;
+                    }}
+                }}
+            }}
+            return false;
+        }}
+    """)
+
+
+def scrape_one(page, report_type: str, label: str, store_code: str, date_from: str, date_to: str, log_dir: Path) -> dict:
+    """1スコープ (報告 × 店舗 × 期間) を scrape。 サブタブがあれば全部巡回。
+    返り値: { '_default': rows, '年代別': rows, '曜日別': rows, ... }
+    """
     print(f"  {report_type} / {label} / {store_code}: {date_from}–{date_to}")
     url = REPORTS[report_type]
     page.goto(url, wait_until="networkidle")
@@ -148,12 +195,29 @@ def scrape_one(page, report_type: str, label: str, store_code: str, date_from: s
     time.sleep(8)
     page.evaluate("window.scrollTo(0, 0)")
     time.sleep(1)
-    page.screenshot(path=str(log_dir / f"{report_type}_{label}_{store_code}.png"), full_page=True)
-    (log_dir / f"{report_type}_{label}_{store_code}.html").write_text(page.content(), encoding="utf-8")
+    page.screenshot(path=str(log_dir / f"{report_type}_{label}_{store_code}_default.png"), full_page=True)
     result = scrape_grid(page)
-    rows = result.get("rows", [])
-    print(f"    → {len(rows)} rows  [{result.get('debug', '?')}]")
-    return rows
+    output = {"_default": {"rows": result.get("rows", []), "debug": result.get("debug")}}
+    print(f"    default → {len(output['_default']['rows'])} rows  [{result.get('debug', '?')}]")
+    # サブタブ巡回
+    subtabs = discover_subtabs(page)
+    if subtabs:
+        print(f"    found subtabs: {subtabs}")
+        for sub in subtabs:
+            if click_subtab(page, sub):
+                time.sleep(3)
+                # 表示ボタンを再押下 (もし必要)
+                try:
+                    page.click("button:has-text('表示')", force=True, timeout=2000)
+                except Exception:
+                    pass
+                time.sleep(3)
+                page.screenshot(path=str(log_dir / f"{report_type}_{label}_{store_code}_{sub}.png"), full_page=True)
+                r = scrape_grid(page)
+                output[sub] = {"rows": r.get("rows", []), "debug": r.get("debug")}
+                print(f"    {sub} → {len(output[sub]['rows'])} rows  [{r.get('debug', '?')}]")
+    (log_dir / f"{report_type}_{label}_{store_code}.html").write_text(page.content(), encoding="utf-8")
+    return output
 
 
 def main():
@@ -199,7 +263,10 @@ def main():
 
         for label, df, dt in periods:
             for store in STORES:
-                rows = scrape_one(page, report_type, label, store["code"], df, dt, log_dir)
+                result = scrape_one(page, report_type, label, store["code"], df, dt, log_dir)
+                # result: dict of { tab_name: { rows, debug } }
+                # 後方互換のため、 _default の rows を トップレベル rows としても保存
+                default_rows = result.get("_default", {}).get("rows", [])
                 out = {
                     "report_type": report_type,
                     "label": label,
@@ -208,7 +275,8 @@ def main():
                     "date_from": df,
                     "date_to": dt,
                     "scraped_at": datetime.now().isoformat(timespec="seconds"),
-                    "rows": rows,
+                    "rows": default_rows,        # 後方互換
+                    "by_tab": result,            # サブタブ別データ
                 }
                 out_path = DATA / f"jouhou_{report_type}_{label}_{store['id']}.json"
                 out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")

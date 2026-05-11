@@ -3995,22 +3995,50 @@ function renderCustomersSubtab(subtab) {
     <div id="customersGrid" class="grid lg:grid-cols-2 gap-3"></div>
   `;
   const sel = document.getElementById("customersPeriodSel");
+  // サブタブ (顧客別区分 / 年代別 / 曜日別 等) の動的選択肢
+  const buildSubtabBar = (byStoreData) => {
+    // by_tab keys を全店舗から union
+    const allTabs = new Set();
+    Object.values(byStoreData).forEach(sd => {
+      Object.keys(sd?.by_tab || {}).forEach(k => allTabs.add(k));
+    });
+    const tabs = Array.from(allTabs).sort((a, b) => {
+      if (a === "_default") return -1;
+      if (b === "_default") return 1;
+      return a.localeCompare(b);
+    });
+    return tabs;
+  };
+
   const draw = () => {
     const period = sel.value;
     const grid = document.getElementById("customersGrid");
     const byStore = jouhouData[period] || {};
+    const tabs = buildSubtabBar(byStore);
+    const activeTab = window._currentJouhouSubtab || (tabs[0] || "_default");
+    window._currentJouhouSubtab = activeTab;
+
+    let tabsBar = "";
+    if (tabs.length > 1) {
+      tabsBar = `<div class="flex gap-1 mb-3 flex-wrap text-xs">
+        ${tabs.map(t => `<button class="jouhou-tab px-2.5 py-1 rounded ${t === activeTab ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" data-tab="${t}">${t === '_default' ? '合計' : t}</button>`).join("")}
+      </div>`;
+    }
+
     const cards = ["tsunashima", "miyakojima"].map(sid => {
       const store = (DATA.stores || {})[sid];
-      const data = byStore[sid] || { rows: [] };
-      const rows = data.rows || [];
+      const data = byStore[sid] || { by_tab: {} };
+      const tabData = (data.by_tab || {})[activeTab] || { rows: [] };
+      let rows = tabData.rows || [];
+      // Fallback: if _default not in by_tab but rows exists at top level
+      if (activeTab === "_default" && !rows.length && data.rows) rows = data.rows;
       const headerCls = sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient";
       if (!rows.length) {
         return `<div class="card overflow-hidden">
           <div class="${headerCls} text-white px-4 py-3 font-bold">${store.name}</div>
-          <div class="p-6 text-center text-sm text-gray-500">データなし</div>
+          <div class="p-6 text-center text-sm text-gray-500">${activeTab === '_default' ? 'データなし' : `「${activeTab}」 データなし`}</div>
         </div>`;
       }
-      // Generic table render — show first N rows with all columns
       const sampleRow = rows[0];
       const keys = Object.keys(sampleRow).filter(k => k !== "_id" && k !== "_index");
       return `<div class="card overflow-hidden">
@@ -4031,9 +4059,15 @@ function renderCustomersSubtab(subtab) {
         </div>
       </div>`;
     }).join("");
-    grid.innerHTML = cards;
+    grid.innerHTML = tabsBar + `<div class="grid lg:grid-cols-2 gap-3">${cards}</div>`;
+    grid.querySelectorAll(".jouhou-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        window._currentJouhouSubtab = btn.dataset.tab;
+        draw();
+      });
+    });
   };
-  sel.addEventListener("change", draw);
+  sel.addEventListener("change", () => { window._currentJouhouSubtab = null; draw(); });
   draw();
 }
 
