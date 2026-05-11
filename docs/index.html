@@ -450,6 +450,42 @@
   </div>
 
   <!-- Recruit candidate modal -->
+  <!-- Staff detail modal -->
+  <div id="staffDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="border-b border-gray-200 px-5 py-3 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div class="flex items-center gap-3">
+          <div id="sdAvatar"></div>
+          <div>
+            <h3 class="font-bold text-lg" id="sdName">—</h3>
+            <div class="text-xs text-gray-500" id="sdStoreDept">—</div>
+          </div>
+        </div>
+        <button id="sdClose" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-5">
+        <!-- KPI cards (current month) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5" id="sdKpi"></div>
+        <!-- Charts -->
+        <div class="grid lg:grid-cols-2 gap-3 mb-5">
+          <div class="card p-4">
+            <h4 class="section-title mb-3">月次売上推移 <span class="section-sub">過去12ヶ月</span></h4>
+            <div style="height:240px"><canvas id="sdSalesChart"></canvas></div>
+          </div>
+          <div class="card p-4">
+            <h4 class="section-title mb-3">客数・指名客数 月次推移</h4>
+            <div style="height:240px"><canvas id="sdCustChart"></canvas></div>
+          </div>
+        </div>
+        <!-- Monthly table -->
+        <div class="card p-4">
+          <h4 class="section-title mb-3">月別実績 <span class="section-sub">過去12ヶ月</span></h4>
+          <div class="overflow-x-auto" id="sdMonthlyTable"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- GitHub token modal -->
   <div id="ghTokenModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
@@ -1952,6 +1988,12 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("✓ GitHub トークン保存完了 · 採用編集が自動反映されるようになりました", "good");
   });
   if (ghModal) ghModal.addEventListener("click", (e) => { if (e.target === ghModal) closeGhModal(); });
+
+  // Staff detail modal
+  const sdClose = document.getElementById("sdClose");
+  if (sdClose) sdClose.addEventListener("click", closeStaffDetail);
+  const sdModal = document.getElementById("staffDetailModal");
+  if (sdModal) sdModal.addEventListener("click", (e) => { if (e.target === sdModal) closeStaffDetail(); });
 });
 
 function deptOfCategory(cat) {
@@ -3196,7 +3238,7 @@ function rankTable(rows, sortKey) {
       ${sorted.map((s, i) => {
         const deptColor = s.primary_dept === "ヘア" ? "var(--dept-hair)" : s.primary_dept === "アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
         const cell = (key) => `<td class="py-2 px-2 text-right kpi-num whitespace-nowrap ${key === sortKey ? 'font-bold text-gray-900' : 'text-gray-600'}">${valFmt(s, key)}</td>`;
-        return `<tr class="border-row hover:bg-gray-50">
+        return `<tr class="border-row hover:bg-gray-50 cursor-pointer" data-staff-name="${s.name.replace(/"/g,'&quot;')}" data-staff-store="${s.store}" onclick="openStaffDetail(this.dataset.staffStore, this.dataset.staffName)">
           <td class="py-2 pr-2 rank-num ${rankCls(i)} text-center">${i+1}</td>
           <td class="py-2 pr-2">
             <div class="flex items-center gap-2 min-w-0">
@@ -3217,6 +3259,142 @@ function rankTable(rows, sortKey) {
     </tbody>
   </table>`;
 }
+
+// === Staff detail modal ===
+function openStaffDetail(storeId, staffName) {
+  const modal = document.getElementById("staffDetailModal");
+  if (!modal) return;
+  // Find all rows for this staff across months
+  const allRows = (DATA.staff_rows || []).filter(s => s.store === storeId && s.name === staffName && !s.hidden);
+  if (!allRows.length) return;
+  const curRow = allRows.find(s => s.month === currentMonth) || allRows[allRows.length - 1];
+  const store = DATA.stores[storeId];
+  document.getElementById("sdAvatar").innerHTML = staffAvatar(curRow, 48);
+  document.getElementById("sdName").textContent = staffName;
+  const deptColor = curRow.primary_dept === "ヘア" ? "var(--dept-hair)" : curRow.primary_dept === "アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
+  document.getElementById("sdStoreDept").innerHTML = `${store.name} · <span style="color:${deptColor}; font-weight:600">${curRow.primary_dept}</span>`;
+
+  // Current month KPI
+  const ms = (DATA.monthly_by_store[storeId] || {})[currentMonth];
+  const rankIn = (rowsForMonth, key) => {
+    const sorted = [...rowsForMonth].sort((a, b) => (b[key] || 0) - (a[key] || 0));
+    return sorted.findIndex(s => s.name === staffName) + 1;
+  };
+  const sameStoreRows = (DATA.staff_rows || []).filter(s => s.store === storeId && s.month === currentMonth && !s.hidden);
+  const rankTotal = rankIn(sameStoreRows, "total_sales");
+  const rankNom = rankIn(sameStoreRows, "tech_sales_nominated");
+  document.getElementById("sdKpi").innerHTML = `
+    <div class="card p-3"><div class="text-xs text-gray-500">総売上 (当月)</div>
+      <div class="kpi-num text-xl font-bold">${fmt(curRow.total_sales || 0)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">店内 ${rankTotal}位 / ${sameStoreRows.length}名</div></div>
+    <div class="card p-3"><div class="text-xs text-gray-500">指名売上</div>
+      <div class="kpi-num text-xl font-bold">${fmt(curRow.tech_sales_nominated || 0)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">店内 ${rankNom}位 · 指名${curRow.tech_customers_nominated || 0}名</div></div>
+    <div class="card p-3"><div class="text-xs text-gray-500">客単価</div>
+      <div class="kpi-num text-xl font-bold">${fmt(curRow.spend_per_customer || 0)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">客数 ${curRow.customers || 0}名</div></div>
+    <div class="card p-3"><div class="text-xs text-gray-500">指名率</div>
+      <div class="kpi-num text-xl font-bold">${curRow.tech_customers ? ((curRow.tech_customers_nominated || 0) / curRow.tech_customers * 100).toFixed(1) + "%" : "—"}</div>
+      <div class="text-[11px] text-gray-500 mt-1">技術客 ${curRow.tech_customers || 0}名</div></div>
+  `;
+
+  // Build past 12 months
+  const monthIdxOf = (ym) => parseInt(ym.slice(0,4)) * 12 + parseInt(ym.slice(4,6));
+  const curIdx = monthIdxOf(currentMonth);
+  const months12 = [];
+  for (let i = 11; i >= 0; i--) {
+    const idx = curIdx - i;
+    const y = Math.floor((idx - 1) / 12);
+    const m = ((idx - 1) % 12) + 1;
+    months12.push(`${y}${String(m).padStart(2,"0")}`);
+  }
+  const rowsByMonth = {};
+  for (const r of allRows) rowsByMonth[r.month] = r;
+
+  // Sales chart
+  const labels = months12.map(m => parseInt(m.slice(4,6), 10) + "月");
+  if (window._chartSDSales) window._chartSDSales.destroy();
+  const salesEl = document.getElementById("sdSalesChart");
+  if (salesEl) {
+    window._chartSDSales = new Chart(salesEl.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "技術売上", data: months12.map(m => (rowsByMonth[m]?.tech_sales || 0)), backgroundColor: "#1E88E5", stack: "s", borderRadius: 3 },
+          { label: "店販", data: months12.map(m => (rowsByMonth[m]?.shop_sales || 0)), backgroundColor: "#F59E0B", stack: "s", borderRadius: 3 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          y: { stacked: true, beginAtZero: true, ticks: { callback: v => "¥" + (v >= 10000 ? (v / 10000).toFixed(0) + "万" : v.toLocaleString()) } },
+          x: { stacked: true }
+        },
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } }
+      }
+    });
+  }
+  // Customer chart
+  if (window._chartSDCust) window._chartSDCust.destroy();
+  const custEl = document.getElementById("sdCustChart");
+  if (custEl) {
+    window._chartSDCust = new Chart(custEl.getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "客数", data: months12.map(m => (rowsByMonth[m]?.customers || 0)), borderColor: "#6B7280", backgroundColor: "rgba(107,114,128,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+          { label: "指名客", data: months12.map(m => (rowsByMonth[m]?.tech_customers_nominated || 0)), borderColor: "#C084FC", backgroundColor: "rgba(192,132,252,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { callback: v => v + "名" } } },
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } }
+      }
+    });
+  }
+  // Monthly table
+  const tableHtml = `<table class="w-full text-sm" style="min-width:600px">
+    <thead class="text-xs text-gray-500 border-b border-gray-200">
+      <tr>
+        <th class="text-left py-2 pr-2">月</th>
+        <th class="text-right py-2 px-2">総売上</th>
+        <th class="text-right py-2 px-2">技術</th>
+        <th class="text-right py-2 px-2">指名売上</th>
+        <th class="text-right py-2 px-2">客数</th>
+        <th class="text-right py-2 px-2">指名客</th>
+        <th class="text-right py-2 px-2">客単価</th>
+        <th class="text-right py-2 px-2">稼働日</th>
+      </tr>
+    </thead>
+    <tbody>${months12.map(m => {
+      const r = rowsByMonth[m];
+      if (!r) return `<tr class="text-gray-400 border-b border-gray-50"><td class="py-1.5 pr-2">${m.slice(0,4)}/${m.slice(4,6)}</td><td colspan="7" class="text-center text-xs">データなし</td></tr>`;
+      const fmtY = v => v ? "¥" + (v).toLocaleString() : "—";
+      return `<tr class="border-b border-gray-50 hover:bg-gray-50">
+        <td class="py-1.5 pr-2 text-xs">${m.slice(0,4)}/${m.slice(4,6)}</td>
+        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.total_sales)}</td>
+        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${fmtY(r.tech_sales)}</td>
+        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.tech_sales_nominated)}</td>
+        <td class="py-1.5 px-2 text-right kpi-num">${r.customers || 0}</td>
+        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${r.tech_customers_nominated || 0}</td>
+        <td class="py-1.5 px-2 text-right kpi-num">${fmtY(r.spend_per_customer)}</td>
+        <td class="py-1.5 px-2 text-right kpi-num text-gray-600">${r.work_days || 0}</td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table>`;
+  document.getElementById("sdMonthlyTable").innerHTML = tableHtml;
+
+  modal.classList.remove("hidden");
+}
+function closeStaffDetail() {
+  document.getElementById("staffDetailModal").classList.add("hidden");
+  if (window._chartSDSales) { window._chartSDSales.destroy(); window._chartSDSales = null; }
+  if (window._chartSDCust) { window._chartSDCust.destroy(); window._chartSDCust = null; }
+}
+window.openStaffDetail = openStaffDetail;  // expose to inline onclick
 
 // ========== Charts ==========
 function renderCharts(month) {
