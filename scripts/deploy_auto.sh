@@ -4,7 +4,8 @@
 #
 # 環境: ~/hanabi-dashboard/
 
-set -euo pipefail
+set -uo pipefail
+# Note: -e は使わない。 個別ステップ失敗時に通知して exit するため、 trap で制御。
 
 ROOT="$HOME/hanabi-dashboard"
 cd "$ROOT"
@@ -14,7 +15,23 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/deploy_$(date +%Y%m%d_%H%M%S).log"
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
-fail() { log "❌ $*"; exit 1; }
+
+# macOS Notification Center で通知 (失敗時のみ呼ぶ)
+notify() {
+  local title="$1"
+  local msg="$2"
+  osascript -e "display notification \"$msg\" with title \"$title\" sound name \"Basso\"" 2>/dev/null || true
+}
+
+# エラー時のtrap: 通知して終了
+on_error() {
+  local exit_code=$?
+  local lineno=$1
+  log "❌ FAILED at line $lineno (exit $exit_code)"
+  notify "HANABI Dashboard 自動更新 失敗" "$(date +%H:%M) line $lineno で停止。 logs/deploy_*.log 確認してください"
+  exit $exit_code
+}
+trap 'on_error $LINENO' ERR
 
 log "==== HANABI dashboard daily auto-deploy ===="
 
@@ -56,8 +73,17 @@ else
   COMMIT_MSG="auto: refresh data $(date '+%Y-%m-%d %H:%M')"
   git -c user.email=hanabi-board@local -c user.name="HANABI Auto" commit -q -m "$COMMIT_MSG"
   log "[5/5] git push"
-  git push -q origin main
+  if ! git push -q origin main; then
+    log "❌ git push failed"
+    notify "HANABI Dashboard 自動更新 失敗" "git push が失敗。 認証または network 確認"
+    exit 1
+  fi
   log "  ✓ pushed: $COMMIT_MSG"
+fi
+
+# 月初の自動デプロイは前月確定があるので軽く通知 (正常完了通知は通常スキップ)
+if [ "$DAY" = "01" ]; then
+  notify "HANABI Dashboard 月初更新完了" "前月確定値を反映済"
 fi
 
 log "==== done ===="
