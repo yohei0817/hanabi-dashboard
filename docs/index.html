@@ -499,10 +499,14 @@
   <div class="tab-panel" data-panel="customers">
     <div class="mb-4">
       <h2 class="text-2xl font-bold">顧客分析</h2>
-      <div class="text-sm text-gray-500 mt-1">失客 / 曜日別 / 年代別 — Uレジ情報分析から取得</div>
+      <div class="text-sm text-gray-500 mt-1">失客 / 曜日別 / 年代別 / 再来店 — Uレジ情報分析から取得 (月1回更新)</div>
     </div>
-    <div class="mb-5 text-xs text-gray-500 bg-blue-50 border-l-4 border-blue-300 px-3 py-2">
-      💡 データは <code class="bg-white px-1 rounded">python3 scripts/scrape_jouhou.py [report] [period]</code> で取得します。 取得済みなら自動表示、 なければ「データなし」 メッセージ。
+    <div class="mb-5 text-xs bg-amber-50 border-l-4 border-amber-400 px-3 py-2.5 flex items-start gap-2">
+      <span class="text-base">📅</span>
+      <div>
+        <strong class="text-amber-800">月1回更新です</strong> — 毎月1日朝に自動取得 (Uレジスクレイプ重いため日次更新せず)。 急ぎで最新が必要な時は手動で
+        <code class="bg-white px-1 rounded mx-1 text-[11px]">python3 scripts/scrape_jouhou.py [week|age|lost|repeat] YYYYMM</code>
+      </div>
     </div>
 
     <!-- セクションタブ (顧客分析の中で切替) -->
@@ -4297,12 +4301,34 @@ function renderCustomersSubtab(subtab) {
     return;
   }
 
-  // Period selector
+  // Period selector + 最新取得日表示
+  const latestPeriod = availablePeriods[0];
+  const latestByStore = jouhouData[latestPeriod] || {};
+  // 全店舗の中で最新の scraped_at を取得
+  let latestScrapedAt = null;
+  for (const sid in latestByStore) {
+    const s = latestByStore[sid]?.scraped_at;
+    if (s && (!latestScrapedAt || s > latestScrapedAt)) latestScrapedAt = s;
+  }
+  // 古さチェック
+  let stalenessLabel = "";
+  if (latestScrapedAt) {
+    const daysAgo = Math.floor((Date.now() - new Date(latestScrapedAt).getTime()) / (1000 * 60 * 60 * 24));
+    const dateStr = latestScrapedAt.slice(0, 10);
+    if (daysAgo > 40) {
+      stalenessLabel = `<span class="text-red-600 font-semibold">⚠️ 最終取得 ${dateStr} (${daysAgo}日前 — 更新推奨)</span>`;
+    } else if (daysAgo > 10) {
+      stalenessLabel = `<span class="text-yellow-700">最終取得 ${dateStr} (${daysAgo}日前)</span>`;
+    } else {
+      stalenessLabel = `<span class="text-green-600">最終取得 ${dateStr} (${daysAgo}日前)</span>`;
+    }
+  }
   const periodOpts = availablePeriods.map(p => `<option value="${p}">${p}</option>`).join("");
   content.innerHTML = `
-    <div class="flex items-center gap-3 mb-3">
-      <span class="text-xs text-gray-500">期間</span>
+    <div class="flex flex-wrap items-center gap-3 mb-3 text-xs">
+      <span class="text-gray-500">期間</span>
       <select id="customersPeriodSel" class="border border-gray-300 rounded px-2 py-1 text-sm">${periodOpts}</select>
+      <span class="ml-auto">${stalenessLabel}</span>
     </div>
     <div id="customersGrid" class="grid lg:grid-cols-2 gap-3"></div>
   `;
