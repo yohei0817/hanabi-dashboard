@@ -30,6 +30,8 @@ STORES = {
         "departments": ["ヘア"],
         # 開店日 (実データの最古から推定/設定)。 同店舗 YoY 判定に使用。
         "open_date": "2022-05-01",  # FY22期初時点で既にOPEN
+        # 店舗写真 (docs/assets/store/ 内のファイル名)
+        "photos": ["tsunashima_1.jpg", "tsunashima_2.jpg"],
     },
     "miyakojima": {
         "name": "ELLE by Hanabi 宮古島店",
@@ -37,6 +39,7 @@ STORES = {
         "brand": "elle",
         "departments": ["ヘア", "アイ", "ネイル"],
         "open_date": "2025-09-01",  # ELLE by Hanabi 宮古島店 開店
+        "photos": ["miyakojima_1.jpg", "miyakojima_2.jpg"],
     },
 }
 

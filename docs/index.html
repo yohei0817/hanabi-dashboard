@@ -566,6 +566,16 @@
   </div>
 
   <!-- Recruit candidate modal -->
+  <!-- Store photo lightbox -->
+  <div id="storePhotoModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 cursor-pointer" onclick="closeStorePhotoModal()">
+    <div class="relative max-w-5xl w-full" onclick="event.stopPropagation()">
+      <button onclick="closeStorePhotoModal()" class="absolute top-2 right-2 text-white text-3xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-80">&times;</button>
+      <img id="storePhotoImg" src="" class="w-full h-auto rounded-lg" style="max-height:90vh;object-fit:contain"/>
+      <div id="storePhotoCaption" class="text-white text-center text-sm mt-2 opacity-80"></div>
+      <div id="storePhotoThumbs" class="flex gap-2 justify-center mt-3"></div>
+    </div>
+  </div>
+
   <!-- Quick search modal (Cmd+K) -->
   <div id="searchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20 p-4">
     <div class="bg-white rounded-lg shadow-2xl max-w-xl w-full overflow-hidden">
@@ -3651,6 +3661,32 @@ function staffInitial(name) {
 
 // セッションごとに一意のキャッシュバスター (写真更新時のブラウザキャッシュ問題を回避)
 const _PHOTO_VERSION = Date.now();
+
+// 店舗写真 lightbox
+function openStorePhotoModal(sid, photoFile) {
+  const store = (DATA.stores || {})[sid];
+  if (!store) return;
+  const photos = store.photos || [];
+  const idx = Math.max(0, photos.indexOf(photoFile));
+  const modal = document.getElementById("storePhotoModal");
+  const img = document.getElementById("storePhotoImg");
+  const cap = document.getElementById("storePhotoCaption");
+  const thumbs = document.getElementById("storePhotoThumbs");
+  const showAt = (i) => {
+    img.src = `assets/store/${encodeURIComponent(photos[i])}?v=${_PHOTO_VERSION}`;
+    cap.textContent = `${store.name} (${i + 1}/${photos.length})`;
+    thumbs.innerHTML = photos.map((p, j) => `
+      <img src="assets/store/${encodeURIComponent(p)}?v=${_PHOTO_VERSION}" class="h-12 w-16 object-cover rounded cursor-pointer ${j === i ? 'ring-2 ring-white' : 'opacity-50 hover:opacity-100'}" onclick="event.stopPropagation(); document.getElementById('storePhotoImg').src='assets/store/${encodeURIComponent(p)}?v=${_PHOTO_VERSION}'; document.getElementById('storePhotoCaption').textContent='${store.name} (${j + 1}/${photos.length})'; this.parentElement.querySelectorAll('img').forEach((el, k) => el.className = el.className.replace(/ring-2 ring-white|opacity-50 hover:opacity-100/g, k === ${j} ? 'ring-2 ring-white' : 'opacity-50 hover:opacity-100'));"/>
+    `).join("");
+  };
+  showAt(idx);
+  modal.classList.remove("hidden");
+}
+function closeStorePhotoModal() {
+  document.getElementById("storePhotoModal").classList.add("hidden");
+}
+window.openStorePhotoModal = openStorePhotoModal;
+window.closeStorePhotoModal = closeStorePhotoModal;
 function staffAvatar(s, size = 24) {
   const profile = (DATA.staff_profiles && DATA.staff_profiles.profiles && DATA.staff_profiles.profiles[s.name]) || null;
   const initial = staffInitial(s.name);
@@ -3791,8 +3827,15 @@ function renderManagementTab() {
         : months < 36 ? `<span class="badge badge-good">成長期 (${Math.floor(months/12)}年${months%12}ヶ月)</span>`
         : `<span class="badge badge-warn">成熟期 (${Math.floor(months/12)}年)</span>`;
       const gradient = r.sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient";
+      const photos = r.store.photos || [];
+      // ヒーロー写真 (先頭1枚) + サムネ (残り)
+      const heroPhoto = photos[0];
+      const thumbs = photos.slice(1);
       return `<div class="card overflow-hidden">
-        <div class="${gradient} text-white px-4 py-2 text-sm font-bold">${r.store.name}</div>
+        ${heroPhoto ? `<div class="relative h-32 bg-gray-100 overflow-hidden">
+          <img src="assets/store/${encodeURIComponent(heroPhoto)}?v=${_PHOTO_VERSION}" alt="${r.store.name}" class="w-full h-full object-cover" onerror="this.style.display='none'"/>
+          <div class="${gradient} absolute bottom-0 left-0 right-0 text-white px-3 py-1.5 text-sm font-bold" style="background:linear-gradient(0deg, rgba(0,0,0,0.7), transparent);">${r.store.name}</div>
+        </div>` : `<div class="${gradient} text-white px-4 py-2 text-sm font-bold">${r.store.name}</div>`}
         <div class="p-3 text-sm">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-gray-500 text-xs">開店日</span>
@@ -3802,10 +3845,13 @@ function renderManagementTab() {
             <span class="text-gray-500 text-xs">経過</span>
             <span>${status}</span>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between ${thumbs.length ? 'mb-2' : ''}">
             <span class="text-gray-500 text-xs">業態</span>
             <span class="font-semibold">${r.store.departments.join(" / ")}${r.store.departments.length === 1 ? "専門" : ""}</span>
           </div>
+          ${thumbs.length ? `<div class="flex gap-1.5 pt-2 border-t border-gray-100">${thumbs.map(p => `
+            <img src="assets/store/${encodeURIComponent(p)}?v=${_PHOTO_VERSION}" alt="" class="h-14 w-1/3 object-cover rounded cursor-pointer hover:opacity-80" onclick="openStorePhotoModal('${r.sid}', '${p}')" onerror="this.style.display='none'"/>
+          `).join("")}</div>` : ""}
         </div>
       </div>`;
     }).join("");
