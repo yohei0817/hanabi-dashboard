@@ -3547,26 +3547,59 @@ function renderManagementTab() {
     <div class="text-[11px] text-gray-500 mt-3">※ 業態違い (綱島=ヘア専門 / 宮古島=トータルビューティ) のため、 客単価/指名率/リピート率の絶対比較は注意。 各店舗のトレンドを見ること推奨。</div>`;
   }
 
-  // スタッフ生産性 (店舗別)
+  // スタッフ生産性 (店舗別) — 自店舗の過去 (前月) との比較で表示。 店舗間の絶対比較はしない (業態違うので)
   const prodEl = document.getElementById("mgmtStaffProductivity");
   if (prodEl) {
-    const maxPerStaff = Math.max(...SCOPE.storeRows.map(r => {
-      const ms = r.ms;
-      const staffCount = ms ? ms.staff.filter(n => !DATA.staff_rows.find(s => s.store === r.sid && s.month === currentMonth && s.name === n && s.hidden)).length : 0;
-      return staffCount ? r.sales / staffCount : 0;
-    }), 1);
+    // Helper: prev month YYYYMM
+    const prevMonth = (() => {
+      const y = parseInt(SCOPE.month.slice(0,4));
+      const m = parseInt(SCOPE.month.slice(4,6));
+      const py = m === 1 ? y - 1 : y;
+      const pm = m === 1 ? 12 : m - 1;
+      return `${py}${String(pm).padStart(2,"0")}`;
+    })();
     prodEl.innerHTML = SCOPE.storeRows.map(r => {
       const ms = r.ms;
       const staffCount = ms ? ms.staff.filter(n => !DATA.staff_rows.find(s => s.store === r.sid && s.month === currentMonth && s.name === n && s.hidden)).length : 0;
-      const perStaff = staffCount ? r.sales / staffCount : 0;
-      const w = (perStaff / maxPerStaff * 100).toFixed(1);
-      const color = r.sid === "miyakojima" ? "#D63384" : "#1E88E5";
-      return `<div>
-        <div class="flex items-center justify-between text-sm mb-1">
-          <span class="font-semibold">${r.store.name}</span>
-          <span class="text-xs text-gray-500">${staffCount}名 · 1人月売 <span class="kpi-num font-bold text-gray-900">${fmt(perStaff)}</span></span>
+      // 着地予測 ベース 1人月売
+      const projection = SCOPE.globalElapsedDays ? Math.round(r.sales / SCOPE.globalElapsedDays * SCOPE.daysInMonth) : 0;
+      const perStaffProj = staffCount ? Math.round(projection / staffCount) : 0;
+      // 1人1日売 (実日平均)
+      const perStaffPerDay = (staffCount && SCOPE.globalElapsedDays) ? Math.round(r.sales / staffCount / SCOPE.globalElapsedDays) : 0;
+      // 前月比 (前月の確定 1人月売)
+      const prevMs = (DATA.monthly_by_store[r.sid] || {})[prevMonth];
+      let prevPerStaff = 0, momPct = null;
+      if (prevMs) {
+        const prevStaff = prevMs.staff.filter(n => !DATA.staff_rows.find(s => s.store === r.sid && s.month === prevMonth && s.name === n && s.hidden)).length;
+        prevPerStaff = prevStaff ? Math.round(prevMs.total_sales / prevStaff) : 0;
+        if (prevPerStaff > 0) momPct = (perStaffProj / prevPerStaff * 100);
+      }
+      const arrow = momPct == null ? "—" : momPct >= 100 ? "▲" : "▼";
+      const momColor = momPct == null ? "#9CA3AF" : momPct >= 105 ? "var(--accent-green)" : momPct >= 95 ? "#6B7280" : "var(--accent-red)";
+      const gradient = r.sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient";
+      return `<div class="card overflow-hidden">
+        <div class="${gradient} text-white px-4 py-2 text-sm font-bold flex justify-between items-center">
+          <span>${r.store.name}</span>
+          <span class="text-xs opacity-80">${staffCount}名 (稼働)</span>
         </div>
-        <div class="progress-track" style="height:10px"><div class="progress-fill" style="width:${w}%; background:${color}"></div></div>
+        <div class="p-4 grid grid-cols-3 gap-3">
+          <div>
+            <div class="text-[11px] text-gray-500">1人月売 (着地予測)</div>
+            <div class="kpi-num text-lg font-bold mt-0.5">${fmt(perStaffProj)}</div>
+            <div class="text-[11px] mt-1" style="color:${momColor}; font-weight:600">${arrow} ${momPct == null ? "前月データなし" : momPct.toFixed(1) + "% (前月比)"}</div>
+            ${momPct != null ? `<div class="text-[10px] text-gray-400">前月 ${fmt(prevPerStaff)}</div>` : ""}
+          </div>
+          <div>
+            <div class="text-[11px] text-gray-500">1人1日売</div>
+            <div class="kpi-num text-lg font-bold mt-0.5">${fmt(perStaffPerDay)}</div>
+            <div class="text-[11px] text-gray-400 mt-1">${SCOPE.globalElapsedDays}日 経過実績</div>
+          </div>
+          <div>
+            <div class="text-[11px] text-gray-500">当月累計</div>
+            <div class="kpi-num text-lg font-bold mt-0.5">${fmt(staffCount ? r.sales / staffCount : 0)}</div>
+            <div class="text-[11px] text-gray-400 mt-1">店舗売 ${fmtM(r.sales)}</div>
+          </div>
+        </div>
       </div>`;
     }).join("");
   }
@@ -3814,7 +3847,7 @@ function openStaffDetail(storeId, staffName) {
   const rowsByMonth = {};
   for (const r of allRows) rowsByMonth[r.month] = r;
 
-  // Sales chart
+  // Sales chart (指名 / フリー / 店販 の3スタック)
   const labels = months12.map(m => parseInt(m.slice(4,6), 10) + "月");
   if (window._chartSDSales) window._chartSDSales.destroy();
   const salesEl = document.getElementById("sdSalesChart");
@@ -3824,7 +3857,8 @@ function openStaffDetail(storeId, staffName) {
       data: {
         labels,
         datasets: [
-          { label: "技術売上", data: months12.map(m => (rowsByMonth[m]?.tech_sales || 0)), backgroundColor: "#1E88E5", stack: "s", borderRadius: 3 },
+          { label: "指名売上", data: months12.map(m => (rowsByMonth[m]?.tech_sales_nominated || 0)), backgroundColor: "#C084FC", stack: "s", borderRadius: 3 },
+          { label: "フリー売上", data: months12.map(m => (rowsByMonth[m]?.tech_sales_free || 0)), backgroundColor: "#94A3B8", stack: "s", borderRadius: 3 },
           { label: "店販", data: months12.map(m => (rowsByMonth[m]?.shop_sales || 0)), backgroundColor: "#F59E0B", stack: "s", borderRadius: 3 },
         ]
       },
@@ -3834,7 +3868,18 @@ function openStaffDetail(storeId, staffName) {
           y: { stacked: true, beginAtZero: true, ticks: { callback: v => "¥" + (v >= 10000 ? (v / 10000).toFixed(0) + "万" : v.toLocaleString()) } },
           x: { stacked: true }
         },
-        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } }
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: c => `${c.dataset.label}: ${fmt(c.raw || 0)}`,
+              footer: items => {
+                const tot = items.reduce((a, it) => a + (it.raw || 0), 0);
+                return `合計: ${fmt(tot)}`;
+              }
+            }
+          }
+        }
       }
     });
   }
