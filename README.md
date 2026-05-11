@@ -1,111 +1,135 @@
 # HANABI Dashboard
 
-サロン事業部とは完全独立した HANABI グループ用ダッシュボード。  
+HANABI グループ用 経営ダッシュボード。 サロン事業部とは完全独立。
 毎朝3分で経営の全体像を把握する CEO ビュー。
 
-## 起動
+🔗 **公開URL**: https://hanabi-board.github.io/hanabi-dashboard/
+
+## ローカル起動
 
 ```bash
 cd ~/hanabi-dashboard
 python3 scripts/generate.py     # CSV → docs/data.json 集計
-# プレビュー (Claude Code preview tool 経由が推奨)
 python3 -m http.server 8767 --directory docs
 ```
 
-ブラウザで http://localhost:8767/ → アカウント選択 (本部/店長/スタッフ)
+ブラウザで http://localhost:8767/ → 本部/管理者 アカウント選択
 
 ## ファイル構成
 
 ```
 ~/hanabi-dashboard/
 ├── data/
-│   ├── budgets.json                       # FY26 予算 (HABABI_FY26予実管理表.xlsx 由来)
-│   ├── staff_profiles.json                # スタッフ写真メタデータ
-│   ├── daily_sales_YYYYMM_<store>.csv     # 日別×店舗 (Shift-JIS)
-│   └── staff_ranking_YYYYMM_<store>.csv   # 月別×店舗×スタッフ (Shift-JIS)
+│   ├── budgets.json                       # 予算 (本部UIから編集可)
+│   ├── staff_profiles.json                # スタッフメタデータ (本部UIから編集可)
+│   ├── recruitment.json                   # 採用候補者 (本部UIから編集可)
+│   ├── external_targets.json              # HotPepper/Instagram URL
+│   ├── daily_sales_YYYYMM_<store>.csv     # 日別×店舗 (Shift-JIS, Uレジから自動DL)
+│   ├── staff_ranking_YYYYMM_<store>.csv   # 月別×店舗×スタッフ
+│   ├── menu_<period>_<store>.json         # メニュー別 (scrape_menu.py)
+│   ├── jouhou_<report>_<period>_<store>.json   # 情報分析 (scrape_jouhou.py)
+│   ├── external_<source>_<date>.json      # HotPepper/Instagram
+│   └── denpyo_<range>_<store>.json        # 取引明細 (scrape_denpyo.py)
 ├── scripts/
-│   └── generate.py                        # CSV → JSON 集計
+│   ├── generate.py                # CSV/JSON → docs/data.json 集計
+│   ├── auto_download.py           # Uレジ → 4 CSV 自動DL (Playwright)
+│   ├── deploy_auto.sh             # 毎朝のorchestration (launchd経由)
+│   ├── backup.sh                  # 週次バックアップ
+│   ├── backfill.py YYYYMM YYYYMM  # 過去月の一括取得
+│   ├── scrape_menu.py             # メニュー別実績
+│   ├── scrape_jouhou.py           # 情報分析の各レポート
+│   ├── scrape_external.py         # HotPepper/Instagram
+│   ├── scrape_denpyo.py           # 伝票明細 (取引粒度)
+│   └── com.hanabi-board.*.plist   # launchd 設定
 └── docs/
-    ├── index.html                         # ダッシュボード本体
-    ├── data.json                          # generate.py の出力
-    └── assets/staff/                      # スタッフ写真置き場
+    ├── index.html                 # ダッシュボード本体
+    ├── data.json                  # generate.py の出力
+    └── assets/                    # ロゴ・スタッフ写真等
 ```
 
 ## 店舗ID
 
-- `tsunashima` = Hanabi綱島店 (ヘア専門)
-- `miyakojima` = ELLE by Hanabi 宮古島店 (ヘア / アイ / ネイル)
+| ID | 名前 | 業態 | 開店日 |
+|---|---|---|---|
+| `tsunashima` | Hanabi 綱島店 | ヘア専門 | 2022-05-01 |
+| `miyakojima` | ELLE by Hanabi 宮古島店 | ヘア / アイ / ネイル | 2025-09-01 |
 
-## 月次運用
-
-1. Uレジで4ファイル DL:
-   - 売上実績 (日別×店舗) × 2店舗
-   - スタッフ別売上実績 (月別×店舗×スタッフ) × 2店舗
-2. ファイル名を規約に合わせて `data/` に配置
-   - `daily_sales_YYYYMM_<store>.csv`
-   - `staff_ranking_YYYYMM_<store>.csv`
-3. `python3 scripts/generate.py` 実行
-4. プレビューで確認
-
-## 完了タスク
-
-- [x] Playwright 自動 DL (Uレジ → CSV → push) `scripts/auto_download.py`
-- [x] launchd 毎朝 8:15 JST 自動デプロイ `scripts/com.hanabi-board.daily.plist`
-- [x] GitHub リポジトリ + GitHub Pages 公開 `https://hanabi-board.github.io/hanabi-dashboard/`
-- [x] パスワード認証 (本部/管理者, SHA-256, 24h session)
-- [x] 採用管理機能 (本部のみ候補者追加・編集・削除モーダル + JSON出力)
-- [x] FY22-25 全月バックフィル `scripts/backfill.py YYYYMM YYYYMM`
-- [x] メニュー別実績スクレイプ `scripts/scrape_menu.py FY22 / FY25_MONTHLY` 等
-- [x] 異常検知アラートパネル (サマリータブ上部)
-- [x] 印刷ビュー (A4 1枚 サマリーレポート)
-
-## 残タスク
-
-- [ ] 伝票明細スクレイプ (取引粒度でリピート率分析)
-- [ ] FY22-24 メニュー別データ取得 (scrape_menu.py で `FY22`, `FY23`, `FY24` を実行)
-- [ ] 情報分析の他レポート (失客 / 年代別 / 曜日別 / Zチャート)
-- [ ] 男女別売上の時系列チャート
-
-## 主要設計
-
-### タブ構造
+## タブ構造 (9タブ)
 
 | タブ | 内容 |
 |---|---|
-| サマリー | 6 KPI + 異常検知アラート + 状態パネル + 月次推移 + 店舗比較 + 部門別(宮古島) + 新規vsリピート店舗別donut |
-| 売上・予算 | 店舗カード(綱島/宮古島 月予算進捗) + 日別推移 + 部門別予算vs実績 |
-| 来客分析 | 来店種別 + 指名・フリー + 男女別 + 月次推移チャート4種 (客数/リピート率/客単価/指名率) |
-| スタッフ実績 | 店舗別 1テーブル + 並び順セレクト |
-| メニュー別実績 | 期間/並び/検索フィルタ + 5スコープ展開 |
-| 年度レポート | 任意のFYペアで通年比較 (FY22から) + 月次重ねチャート + 部門別 + メニューTOP10 |
-| 採用 | KPI + ファネル + ソース + 候補者リスト (本部は追加・編集・削除可) |
+| **サマリー** | アラート + 6 KPI + 状態パネル + 月次推移 + 店舗カード + 部門別 + 新規vsリピート |
+| **売上・予算** | 店舗カード (予算進捗 + 着地予測 + 部門別) + 日別推移チャート |
+| **来客分析** | 店舗別 (新規vsリピート / 指名vsフリー / 男女別) + 月次推移6種 |
+| **スタッフ実績** | 店舗別ランキング (並び順切替) + 行クリックで個別詳細モーダル |
+| **メニュー別** | 期間/並び/検索 + 5スコープ (綱島/宮古島合算+部門3) + 前月比 |
+| **年度レポート** | FY22-26 成長推移 (KPI + 売上 stacked + 客数/客単価/部門推移) + 2年度比較 |
+| **マネジメント** | 全社KPI + 売上構成 + ライフサイクル + 24ヶ月推移 + ベンチマーク + 生産性 + 外部メディア |
+| **顧客分析** | 失客 / 曜日別 / 年代別 / 再来店 (情報分析 scrape データ) |
+| **採用** | 候補者管理 (本部追加・編集・削除可) + ファネル + ソース |
 
-### 達成率の表記ルール
+## 自動化 (launchd)
 
-- **月達成率**: 当月実績 / 月予算 (期末判断用)
-- **ペース達成率**: 当月実績 / (月予算 × 経過日数/月日数) ← 月途中の判断はこちら
-- **前年同月比** (ペース調整): 当月実績 / (FY25月平均 × 経過日数/月日数)
-- バッジ色: 緑≥100% / 黄80-99% / 赤<80%
+| ジョブ | 時刻 | 内容 |
+|---|---|---|
+| `com.hanabi-board.daily` | 毎朝 8:15 JST | `deploy_auto.sh`: pull → Uレジ DL → メニュー scrape → generate.py → push |
+| `com.hanabi-board.weekly-backup` | 毎週日曜 6:00 JST | `backup.sh`: data/ を `~/Documents/HANABI_backup/` にスナップショット |
 
-### 部門色 (確定)
+## GitHub 直接書き込み (本部のみ)
 
+本部権限で以下のフィールドはダッシュボードから直接 GitHub に push できる:
+- `data/recruitment.json` (候補者追加・編集・削除)
+- `data/budgets.json` (月別予算編集)
+- `data/staff_profiles.json` (スタッフ情報追加・編集)
+
+設定: ヘッダー「GH」 ボタン → Personal Access Token (PAT) 入力 (1回のみ)。
+
+## 達成率の表記ルール
+
+| 種類 | 計算式 | 用途 |
+|---|---|---|
+| **月達成率** | 当月実績 / 月予算 | 期末判断 |
+| **ペース達成率** | 当月実績 / (月予算 × 経過日数/月日数) | 月途中の判断 |
+| **前年同月比 (同店舗)** | 当月実績 / (前年同月実績 × 経過日数/月日数) | 成長率 (開店12ヶ月以上の店舗のみ対象) |
+| バッジ色 | 緑≥100% / 黄80-99% / 赤<80% | |
+
+## 設計方針
+
+### 全社 vs 店舗別 の分離原則
+業態違い (綱島=ヘア専門 / 宮古島=トータルビューティ) のため、 平均が混ざる比率指標は店舗別で表示:
+- **全社合算 OK**: 売上、 客数、 合計値などビジネス意味のある合算
+- **店舗別のみ**: 客単価、 指名率、 リピート率、 男女比、 部門別
+
+### 部門色
 - ヘア = ピンク `#E91E63`
 - アイ = ブルー `#1E88E5`
 - ネイル = イエロー `#F59E0B`
 
-### データ制約
-
-- 部門別の新規/リピート区分は取れない (日別CSVは店舗単位までで部門breakdownなし)
-- 代替: 部門別 客数+客単価+指名率+構成比 を staff_ranking 集計から表示
-- 伝票明細CSVなし → リピート率分析等は不可 (Playwright scrape は技術的に可能、未実装)
-- ELLE 宮古島店は 2025/9 OPEN のため FY25 の前半 (5月-8月) はデータなし。 同店舗 YoY 比較で除外
+### 同店舗 YoY
+店舗の `open_date` から12ヶ月以上経過した場合のみ同店舗扱い。 ELLE宮古島 (2025/9開店) は 2026/9 以降に同店舗化。
 
 ### 水野陽平の扱い
+スタッフ店販購入を売上計上しているため `HIDDEN_STAFF_NAMES` に登録。 集計には含まれるが、 ランキング・スタッフ表示からは除外。
 
-スタッフ店販購入を売上計上しているため `HIDDEN_STAFF_NAMES` に登録済。  
-集計には含まれるが、ランキング・スタッフ表示からは除外される。
+## キーボードショートカット
+
+- **Cmd+K** (Mac) / **Ctrl+K** (Win): 全画面検索 (タブ/店舗/スタッフ/メニュー/管理動作)
+- **Esc**: モーダルを閉じる
+- **印刷**: ヘッダー印刷ボタン → サマリー + 売上・予算 の A4 2枚 PDF
+
+## データ拡張スクリプト
+
+| スクリプト | 用途 | 実行例 |
+|---|---|---|
+| `auto_download.py` | 売上CSV取得 | `python3 scripts/auto_download.py 202605` |
+| `backfill.py` | 複数月の一括取得 | `python3 scripts/backfill.py 202205 202504` |
+| `scrape_menu.py` | メニュー別実績 | `python3 scripts/scrape_menu.py FY25_MONTHLY` |
+| `scrape_jouhou.py` | 情報分析 (失客/曜日別/年代別) | `python3 scripts/scrape_jouhou.py week 202605` |
+| `scrape_external.py` | HotPepper/Instagram | `python3 scripts/scrape_external.py all` |
+| `scrape_denpyo.py` | 伝票明細 | `python3 scripts/scrape_denpyo.py 202605` |
 
 ## 出典
 
-- FY26 予算: `Box: 050_HANABI/010_運営本部/HABABI_FY26予実管理表.xlsx` (annual ¥113.75M)
-- 前年実績: 綱島 ¥40.4M / 宮古島 ¥42.8M (FY25)
+- FY26 予算: Box `050_HANABI/010_運営本部/HABABI_FY26予実管理表.xlsx`
+- 認証情報: `.env` (gitignore済、 Uレジログイン用)
+- GitHub repo: https://github.com/hanabi-board/hanabi-dashboard
