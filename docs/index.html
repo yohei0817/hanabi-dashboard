@@ -458,6 +458,12 @@
       <h3 class="section-title mb-3">スタッフ生産性 <span class="section-sub">店舗別 1人あたり月売上</span></h3>
       <div id="mgmtStaffProductivity" class="space-y-3"></div>
     </div>
+
+    <!-- 外部メディア (HotPepper / Instagram) -->
+    <div class="card p-5 mb-5">
+      <h3 class="section-title mb-3">外部メディア指標 <span class="section-sub">HotPepper Beauty 評価 / Instagram フォロワー</span></h3>
+      <div id="mgmtExternal"></div>
+    </div>
   </div>
 
   <!-- =========== Tab: 顧客分析 =========== -->
@@ -3682,6 +3688,52 @@ function renderManagementTab() {
       <tbody>${rowsHtml}</tbody>
     </table>
     <div class="text-[11px] text-gray-500 mt-3">※ 業態違い (綱島=ヘア専門 / 宮古島=トータルビューティ) のため、 客単価/指名率/リピート率の絶対比較は注意。 各店舗のトレンドを見ること推奨。</div>`;
+  }
+
+  // 外部メディア (HotPepper / Instagram) - 履歴データから最新+前回の比較
+  const extEl = document.getElementById("mgmtExternal");
+  if (extEl) {
+    const external = DATA.external || { hotpepper: [], instagram: [] };
+    const lastHP = external.hotpepper && external.hotpepper.length ? external.hotpepper[external.hotpepper.length - 1] : null;
+    const lastIG = external.instagram && external.instagram.length ? external.instagram[external.instagram.length - 1] : null;
+    const prevHP = external.hotpepper && external.hotpepper.length >= 2 ? external.hotpepper[external.hotpepper.length - 2] : null;
+    const prevIG = external.instagram && external.instagram.length >= 2 ? external.instagram[external.instagram.length - 2] : null;
+    if (!lastHP && !lastIG) {
+      extEl.innerHTML = `<div class="text-sm text-gray-400 py-4 text-center">
+        データ未取得 — <code class="bg-gray-100 px-1 rounded">python3 scripts/scrape_external.py all</code> で取得開始<br>
+        <span class="text-[11px]">初回は data/external_targets.json に URL 登録が必要</span>
+      </div>`;
+    } else {
+      const cards = SCOPE.storeRows.map(r => {
+        const hpCur = (lastHP?.stores || {})[r.sid] || {};
+        const hpPrev = (prevHP?.stores || {})[r.sid] || {};
+        const igCur = (lastIG?.stores || {})[r.sid] || {};
+        const igPrev = (prevIG?.stores || {})[r.sid] || {};
+        const gradient = r.sid === "miyakojima" ? "elle-gradient" : "hanabi-gradient";
+        const ratingDelta = hpCur.rating != null && hpPrev.rating != null ? (hpCur.rating - hpPrev.rating).toFixed(2) : null;
+        const reviewDelta = hpCur.review_count != null && hpPrev.review_count != null ? (hpCur.review_count - hpPrev.review_count) : null;
+        const followDelta = igCur.followers != null && igPrev.followers != null ? (igCur.followers - igPrev.followers) : null;
+        return `<div class="card overflow-hidden">
+          <div class="${gradient} text-white px-4 py-2 text-sm font-bold">${r.store.name}</div>
+          <div class="p-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div class="text-[11px] text-gray-500">HotPepper 評価</div>
+              <div class="kpi-num text-xl font-bold mt-0.5">${hpCur.rating != null ? "★ " + hpCur.rating.toFixed(2) : "—"}</div>
+              <div class="text-[11px] text-gray-500 mt-1">口コミ ${hpCur.review_count != null ? hpCur.review_count + "件" : "—"} ${reviewDelta != null && reviewDelta > 0 ? `<span class="text-green-600">+${reviewDelta}</span>` : ""}</div>
+              ${ratingDelta != null ? `<div class="text-[10px] mt-0.5" style="color:${parseFloat(ratingDelta) >= 0 ? '#10B981' : '#DC2626'}">${parseFloat(ratingDelta) >= 0 ? '+' : ''}${ratingDelta} (前回比)</div>` : ""}
+            </div>
+            <div>
+              <div class="text-[11px] text-gray-500">Instagram</div>
+              <div class="kpi-num text-xl font-bold mt-0.5">${igCur.followers != null ? igCur.followers.toLocaleString() : "—"}</div>
+              <div class="text-[11px] text-gray-500 mt-1">フォロワー ${igCur.posts != null ? "· 投稿 " + igCur.posts : ""}</div>
+              ${followDelta != null ? `<div class="text-[10px] mt-0.5" style="color:${followDelta >= 0 ? '#10B981' : '#DC2626'}">${followDelta >= 0 ? '+' : ''}${followDelta} (前回比)</div>` : ""}
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+      extEl.innerHTML = `<div class="grid lg:grid-cols-2 gap-3">${cards}</div>
+        <div class="text-[11px] text-gray-400 mt-3">取得日時: HotPepper ${lastHP?.scraped_at || "—"} / Instagram ${lastIG?.scraped_at || "—"}</div>`;
+    }
   }
 
   // スタッフ生産性 (店舗別) — 自店舗の過去 (前月) との比較で表示。 店舗間の絶対比較はしない (業態違うので)

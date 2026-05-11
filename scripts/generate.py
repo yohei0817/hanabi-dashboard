@@ -406,6 +406,18 @@ def main():
         except Exception:
             pass
 
+    # Load external scrape data (HotPepper / Instagram) — history per source
+    # 構造: external_<source>_YYYYMMDD.json — 履歴があれば時系列が取れる
+    external = {"hotpepper": [], "instagram": []}
+    for p in sorted(DATA.glob("external_*.json")):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+            src = d.get("source")
+            if src in external:
+                external[src].append(d)
+        except Exception as e:
+            print(f"  warn: failed to load {p.name}: {e}")
+
     out = {
         "generated_at": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
         "stores": STORES,
@@ -425,6 +437,7 @@ def main():
         "recruitment": recruitment,
         "staff_profiles": staff_profiles,
         "jouhou_data": jouhou_data,
+        "external": external,
     }
 
     out_path = DOCS / "data.json"
