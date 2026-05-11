@@ -1088,17 +1088,22 @@ function drawGrowthDeptChart(fys, isFYInProgress) {
   const el = document.getElementById("growthDeptChart");
   if (!el) return;
   if (window._chartGD) window._chartGD.destroy();
-  const completedFys = fys.filter(fy => !isFYInProgress(fy));
-  const labels = completedFys.map(fy => `FY${fy}`);
   const deptFor = (fy, dept) => {
     return getFYMonths(fy).reduce((acc, m) => {
       const ms = (DATA.monthly_by_store["miyakojima"] || {})[m];
       return acc + (ms ? (ms.by_dept[dept]?.sales || 0) : 0);
     }, 0);
   };
-  const hair = completedFys.map(fy => Math.round(deptFor(fy, "ヘア") / 1000));
-  const eye = completedFys.map(fy => Math.round(deptFor(fy, "アイ") / 1000));
-  const nail = completedFys.map(fy => Math.round(deptFor(fy, "ネイル") / 1000));
+  // ELLE 宮古島は 2025/9 OPEN なので FY25 から表示 (FY22-24 は空なので除外)
+  const eligibleFys = fys.filter(fy => {
+    if (isFYInProgress(fy)) return false;
+    const total = deptFor(fy, "ヘア") + deptFor(fy, "アイ") + deptFor(fy, "ネイル");
+    return total > 0;
+  });
+  const labels = eligibleFys.map(fy => `FY${fy}`);
+  const hair = eligibleFys.map(fy => Math.round(deptFor(fy, "ヘア") / 1000));
+  const eye = eligibleFys.map(fy => Math.round(deptFor(fy, "アイ") / 1000));
+  const nail = eligibleFys.map(fy => Math.round(deptFor(fy, "ネイル") / 1000));
   window._chartGD = new Chart(el.getContext("2d"), {
     type: "bar",
     data: {
@@ -1769,10 +1774,20 @@ function renderMenuTab() {
   const monthlyKeys = Object.keys(menuData)
     .filter(k => /^\d{6}$/.test(k))
     .sort((a, b) => b.localeCompare(a));  // newest first
-  for (const m of monthlyKeys) {
-    const y = m.slice(0, 4);
-    const mo = parseInt(m.slice(4, 6), 10);
-    optionList.push({ value: m, label: `${y}年${mo}月` });
+  // 進行中月: 確定 YYYYMM データがなく MTD のみの場合はそれを使用
+  const mtdKeys = Object.keys(menuData)
+    .filter(k => /^\d{6}MTD$/.test(k))
+    .map(k => ({ key: k, ym: k.slice(0, 6) }))
+    .filter(({ ym }) => !(ym in menuData));  // skip if confirmed YYYYMM also exists
+  // Merge: MTD entries inserted in correct sort order
+  const allMonthlyEntries = [];
+  for (const m of monthlyKeys) allMonthlyEntries.push({ value: m, ym: m, mtd: false });
+  for (const e of mtdKeys) allMonthlyEntries.push({ value: e.key, ym: e.ym, mtd: true });
+  allMonthlyEntries.sort((a, b) => b.ym.localeCompare(a.ym));
+  for (const e of allMonthlyEntries) {
+    const y = e.ym.slice(0, 4);
+    const mo = parseInt(e.ym.slice(4, 6), 10);
+    optionList.push({ value: e.value, label: `${y}年${mo}月${e.mtd ? " (進行中)" : ""}` });
   }
 
   if (!periodSel.children.length) {
