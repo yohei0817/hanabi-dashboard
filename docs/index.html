@@ -3899,8 +3899,9 @@ function renderManagementTab() {
       const nailSales = (eleRow.ms.by_dept["ネイル"] || {}).sales || 0;
       outerData.push(hairSales, eyeSales, nailSales);
       outerLabels.push("宮古島 ヘア", "宮古島 アイ", "宮古島 ネイル");
-      // ピンク系グラデで「ELLE 内」を視覚的に表現
-      outerColors.push("#B71C5C", "#D63384", "#E879A4");
+      // ピンク系で「ELLE 内」を視覚的に統一しつつ、 明度差を強めて視認性UP
+      // ヘア=濃いワイン/バーガンディ、 アイ=ELLE本色、 ネイル=ライトピンク
+      outerColors.push("#831843", "#D63384", "#F9A8D4");
     }
     const total = innerData.reduce((a,b) => a+b, 0);
     window._chartMgmtComp = new Chart(compositionEl.getContext("2d"), {
@@ -3947,7 +3948,7 @@ function renderManagementTab() {
       // ELLE 宮古島 のみ部門別 サブ行
       let deptDetail = "";
       if (r.sid === "miyakojima" && r.ms) {
-        const deptColors = { "ヘア": "#B71C5C", "アイ": "#D63384", "ネイル": "#E879A4" };
+        const deptColors = { "ヘア": "#831843", "アイ": "#D63384", "ネイル": "#F9A8D4" };
         const deptRows = ["ヘア", "アイ", "ネイル"].map(d => {
           const dSales = (r.ms.by_dept[d] || {}).sales || 0;
           const dPct = r.sales ? (dSales / r.sales * 100) : 0;
