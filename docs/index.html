@@ -4091,14 +4091,38 @@ function renderManagementTab() {
     <div class="text-[11px] text-gray-500 mt-3">※ 業態違い (綱島=ヘア専門 / 宮古島=トータルビューティ) のため、 客単価/指名率/リピート率の絶対比較は注意。 各店舗のトレンドを見ること推奨。</div>`;
   }
 
-  // 外部メディア (HotPepper / Instagram) - 履歴データから最新+前回の比較
+  // 外部メディア (HotPepper / Instagram) - 月スナップショット
+  // 表示月 (SCOPE.month, 例: 202605) のスクレイプ + 前月 (202604) のスクレイプ を比較
   const extEl = document.getElementById("mgmtExternal");
   if (extEl) {
     const external = DATA.external || { hotpepper: [], instagram: [] };
-    const lastHP = external.hotpepper && external.hotpepper.length ? external.hotpepper[external.hotpepper.length - 1] : null;
-    const lastIG = external.instagram && external.instagram.length ? external.instagram[external.instagram.length - 1] : null;
-    const prevHP = external.hotpepper && external.hotpepper.length >= 2 ? external.hotpepper[external.hotpepper.length - 2] : null;
-    const prevIG = external.instagram && external.instagram.length >= 2 ? external.instagram[external.instagram.length - 2] : null;
+    // ある月の最後の scrape record を返す
+    const recordForMonth = (records, ym) => {
+      const inMonth = (records || []).filter(rec => (rec.scraped_at || "").slice(0,7) === `${ym.slice(0,4)}-${ym.slice(4,6)}`);
+      return inMonth.length ? inMonth[inMonth.length - 1] : null;
+    };
+    // 前月 YYYYMM
+    const prevMonth = (() => {
+      const y = parseInt(SCOPE.month.slice(0,4));
+      const m = parseInt(SCOPE.month.slice(4,6));
+      const py = m === 1 ? y - 1 : y;
+      const pm = m === 1 ? 12 : m - 1;
+      return `${py}${String(pm).padStart(2,"0")}`;
+    })();
+    let lastHP = recordForMonth(external.hotpepper, SCOPE.month);
+    let lastIG = recordForMonth(external.instagram, SCOPE.month);
+    const prevHP = recordForMonth(external.hotpepper, prevMonth);
+    const prevIG = recordForMonth(external.instagram, prevMonth);
+    // 当月のscrapeがない場合は最新を fallback (まだ月初取得前など)
+    let hpFallback = false, igFallback = false;
+    if (!lastHP && (external.hotpepper || []).length) {
+      lastHP = external.hotpepper[external.hotpepper.length - 1];
+      hpFallback = true;
+    }
+    if (!lastIG && (external.instagram || []).length) {
+      lastIG = external.instagram[external.instagram.length - 1];
+      igFallback = true;
+    }
     if (!lastHP && !lastIG) {
       extEl.innerHTML = `<div class="text-sm text-gray-400 py-4 text-center">
         データ未取得 — <code class="bg-gray-100 px-1 rounded">python3 scripts/scrape_external.py all</code> で取得開始<br>
@@ -4137,7 +4161,7 @@ function renderManagementTab() {
                 <div class="text-[11px] text-gray-500">HotPepper 評価${listings.length > 1 ? ` (${listings.length}ページ平均)` : ""}</div>
                 <div class="mt-1">${renderStars(displayRating, { size: "1.3em" })}</div>
                 <div class="text-[11px] text-gray-500 mt-1.5">${displayReviewCount != null ? "口コミ " + displayReviewCount + "件" : "口コミ —"} ${reviewDelta != null && reviewDelta > 0 ? `<span class="text-green-600">+${reviewDelta}</span>` : ""}</div>
-                ${ratingDelta != null && parseFloat(ratingDelta) !== 0 ? `<div class="text-[10px] mt-0.5" style="color:${parseFloat(ratingDelta) >= 0 ? '#10B981' : '#DC2626'}">${parseFloat(ratingDelta) >= 0 ? '+' : ''}${ratingDelta} (前回比)</div>` : ""}
+                ${ratingDelta != null && parseFloat(ratingDelta) !== 0 ? `<div class="text-[10px] mt-0.5" style="color:${parseFloat(ratingDelta) >= 0 ? '#10B981' : '#DC2626'}">${parseFloat(ratingDelta) >= 0 ? '+' : ''}${ratingDelta} (前月比)</div>` : ""}
                 ${listings.length > 1 ? `<div class="mt-2 space-y-1">${listings.map(l => `
                   <div class="text-[11px] flex items-center gap-1.5">
                     <span class="text-gray-600 font-semibold">${l.category || "—"}</span>
@@ -4149,7 +4173,7 @@ function renderManagementTab() {
                 <div class="text-[11px] text-gray-500">Instagram</div>
                 <div class="kpi-num text-xl font-bold mt-0.5">${igCur.followers != null ? igCur.followers.toLocaleString() : "—"}</div>
                 <div class="text-[11px] text-gray-500 mt-1">フォロワー ${igCur.posts != null ? "· 投稿 " + igCur.posts : ""}</div>
-                ${followDelta != null ? `<div class="text-[10px] mt-0.5" style="color:${followDelta >= 0 ? '#10B981' : '#DC2626'}">${followDelta >= 0 ? '+' : ''}${followDelta} (前回比)</div>` : ""}
+                ${followDelta != null ? `<div class="text-[10px] mt-0.5" style="color:${followDelta >= 0 ? '#10B981' : '#DC2626'}">${followDelta >= 0 ? '+' : ''}${followDelta} (前月比)</div>` : ""}
                 ${igCur.username ? `<div class="text-[10px] text-gray-400 mt-0.5"><a href="https://www.instagram.com/${igCur.username}/" target="_blank" class="hover:underline">@${igCur.username}</a></div>` : ""}
               </div>
             </div>
@@ -4168,8 +4192,12 @@ function renderManagementTab() {
           </div>
         </div>`;
       }).join("");
+      const fallbackNote = (hpFallback || igFallback) ? `<span class="text-yellow-700">⚠️ ${SCOPE.month.slice(0,4)}年${SCOPE.month.slice(4,6)}月の scrape 未取得 — 最新値を表示</span>` : "";
       extEl.innerHTML = `<div class="grid lg:grid-cols-2 gap-3">${cards}</div>
-        <div class="text-[11px] text-gray-400 mt-3">取得日時: HotPepper ${lastHP?.scraped_at || "—"} / Instagram ${lastIG?.scraped_at || "—"}</div>`;
+        <div class="text-[11px] text-gray-400 mt-3 flex flex-wrap gap-3 justify-between">
+          <span>表示月: ${SCOPE.month.slice(0,4)}/${SCOPE.month.slice(4,6)} · HotPepper ${lastHP?.scraped_at?.slice(0,10) || "—"} / Instagram ${lastIG?.scraped_at?.slice(0,10) || "—"}</span>
+          ${fallbackNote}
+        </div>`;
     }
   }
 
