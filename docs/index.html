@@ -1459,11 +1459,20 @@ function renderGrowthView() {
   const fySales = (fy, sid) => getFYMonths(fy).reduce((a,m) => a + salesFor(sid, m), 0);
   const fyCust = (fy, sid) => getFYMonths(fy).reduce((a,m) => a + customersFor(sid, m), 0);
 
+  // 全店舗合算ヘルパー (新店舗追加対応)
+  const allStoreIdsGrowth = Object.keys(DATA.stores || {});
+  const sumStoreSales = (fy, monthsArg) => {
+    const months = monthsArg || getFYMonths(fy);
+    return months.reduce((a, m) => a + allStoreIdsGrowth.reduce((b, sid) => b + salesFor(sid, m), 0), 0);
+  };
+  const sumStoreCust = (fy) => allStoreIdsGrowth.reduce((a, sid) => a + fyCust(fy, sid), 0);
+  const monthSumAll = (m) => allStoreIdsGrowth.reduce((a, sid) => a + salesFor(sid, m), 0);
+
   // Determine if a given FY is in-progress (some months have no data yet)
+  // 但し未開店店舗 (open_date が未来) はそもそも対象外、 全店舗が 0 になる月のみ「進行中/未開始」 と判定
   const isFYInProgress = (fy) => {
     const months = getFYMonths(fy);
-    // In-progress if any month has zero sales (for the latest store with data)
-    return months.some(m => salesFor("tsunashima", m) + salesFor("miyakojima", m) === 0);
+    return months.some(m => monthSumAll(m) === 0);
   };
 
   const curFY = getCurrentFY();
@@ -1472,12 +1481,10 @@ function renderGrowthView() {
   const cardsRoot = document.getElementById("growthFYCards");
   const lastFiveFys = fys.slice(-5);  // show up to 5 most recent FYs
   cardsRoot.innerHTML = lastFiveFys.map(fy => {
-    const tsu = fySales(fy, "tsunashima");
-    const ele = fySales(fy, "miyakojima");
-    const total = tsu + ele;
-    const cust = fyCust(fy, "tsunashima") + fyCust(fy, "miyakojima");
+    const total = sumStoreSales(fy);
+    const cust = sumStoreCust(fy);
     const prevFy = fy - 1;
-    const prevTotal = fys.includes(prevFy) ? (fySales(prevFy, "tsunashima") + fySales(prevFy, "miyakojima")) : 0;
+    const prevTotal = fys.includes(prevFy) ? sumStoreSales(prevFy) : 0;
     const inProgress = isFYInProgress(fy);
     // For in-progress FYs, YoY uses partial-elapsed comparison
     let yoyPct = null, yoyLabel = "";
@@ -1488,10 +1495,10 @@ function renderGrowthView() {
         let elapsedMonths = 0, partialFraction = 0;
         for (let i = 0; i < tgtMonths.length; i++) {
           const m = tgtMonths[i];
-          const s = salesFor("tsunashima", m) + salesFor("miyakojima", m);
+          const s = monthSumAll(m);
           if (s === 0) { partialFraction = 0; break; }
-          // Check if this month is fully elapsed by counting actual days
-          const ds = ((DATA.daily_by_store["tsunashima"] || {})[m] || []).concat((DATA.daily_by_store["miyakojima"] || {})[m] || []);
+          // 全店舗合算で uniqueDates 算出
+          const ds = allStoreIdsGrowth.flatMap(sid => (DATA.daily_by_store[sid] || {})[m] || []);
           const uniqueDates = new Set(ds.filter(d => d.sales > 0).map(d => d.date));
           const daysInM = (DATA.days_in_month || {})[m] || 30;
           if (uniqueDates.size >= daysInM) { elapsedMonths++; }
@@ -1763,57 +1770,73 @@ function renderAnnualReport() {
   document.getElementById("annualMenuTitle").innerHTML = `メニュー別 TOP 10 比較 <span class="section-sub">${tgtLabel} vs ${cmpLabel} 通年</span>`;
 
   // === Aggregate ===
+  // 全店舗対応 (新店舗 OPEN対応)
+  const allStoresYR = Object.keys(DATA.stores || {});
   const fy = (months, sid) => months.reduce((a,m) => a + salesFor(sid, m), 0);
   const fyC = (months, sid) => months.reduce((a,m) => a + customersFor(sid, m), 0);
-  const tgtTsu = fy(targetMonths, "tsunashima");
-  const tgtEle = fy(targetMonths, "miyakojima");
-  const cmpTsu = fy(compareMonths, "tsunashima");
-  const cmpEle = fy(compareMonths, "miyakojima");
-  const tgtTotal = tgtTsu + tgtEle;
-  const cmpTotal = cmpTsu + cmpEle;
-  const tgtCustTsu = fyC(targetMonths, "tsunashima");
-  const tgtCustEle = fyC(targetMonths, "miyakojima");
-  const cmpCustTsu = fyC(compareMonths, "tsunashima");
-  const cmpCustEle = fyC(compareMonths, "miyakojima");
+  // 全店舗合算
+  const tgtTotal = allStoresYR.reduce((a, sid) => a + fy(targetMonths, sid), 0);
+  const cmpTotal = allStoresYR.reduce((a, sid) => a + fy(compareMonths, sid), 0);
+  // 月の全店舗合算 (in-progress 判定用)
+  const monthSumAllYR = (m) => allStoresYR.reduce((a, sid) => a + salesFor(sid, m), 0);
 
   // Budget only available for current FY (could extend per-FY budgets later)
   const isTargetCurrent = targetFY === getCurrentFY();
   const tgtBudget = isTargetCurrent ? (((DATA.budgets || {}).annual || {}).company || 0) : 0;
-  const tgtTsuBudget = isTargetCurrent ? (((DATA.budgets || {}).annual?.by_store || {}).tsunashima || 0) : 0;
-  const tgtEleBudget = isTargetCurrent ? (((DATA.budgets || {}).annual?.by_store || {}).miyakojima || 0) : 0;
+  const annualByStore = ((DATA.budgets || {}).annual || {}).by_store || {};
 
   // Determine whether target FY is in progress (has any month with no data yet)
-  const completedTargetMonths = targetMonths.filter(m => salesFor("tsunashima", m) + salesFor("miyakojima", m) > 0);
+  const completedTargetMonths = targetMonths.filter(m => monthSumAllYR(m) > 0);
   const isTargetInProgress = completedTargetMonths.length < 12;
 
-  let monthsEffective = 12;  // assume complete unless target is in progress
-  let projection = tgtTotal, projTsu = tgtTsu, projEle = tgtEle;
+  let monthsEffective = 12;
+  let projection = tgtTotal;
+  // Per-store projection map (新店舗対応で動的に)
+  const tgtPerStore = {};
+  const projPerStore = {};
+  const cmpPerStore = {};
+  for (const sid of allStoresYR) {
+    tgtPerStore[sid] = fy(targetMonths, sid);
+    cmpPerStore[sid] = fy(compareMonths, sid);
+    projPerStore[sid] = tgtPerStore[sid];
+  }
   let elapsedCmpTotal = cmpTotal, yoyTotal = 0;
   if (isTargetInProgress) {
     let monthsElapsed = 0;
     for (const m of targetMonths) {
-      if (salesFor("tsunashima", m) + salesFor("miyakojima", m) > 0) monthsElapsed++;
+      if (monthSumAllYR(m) > 0) monthsElapsed++;
       else break;
     }
     const dailyFraction = SCOPE.globalElapsedDays / SCOPE.daysInMonth;
     monthsEffective = Math.max(0, monthsElapsed - 1) + dailyFraction;
     projection = monthsEffective > 0 ? Math.round(tgtTotal / monthsEffective * 12) : 0;
-    projTsu = monthsEffective > 0 ? Math.round(tgtTsu / monthsEffective * 12) : 0;
-    projEle = monthsEffective > 0 ? Math.round(tgtEle / monthsEffective * 12) : 0;
+    for (const sid of allStoresYR) {
+      projPerStore[sid] = monthsEffective > 0 ? Math.round(tgtPerStore[sid] / monthsEffective * 12) : 0;
+    }
     // Compare period: same elapsed slice from compareFY
-    elapsedCmpTotal = compareMonths.slice(0, Math.max(0, monthsElapsed - 1)).reduce((a,m) => a + salesFor("tsunashima", m) + salesFor("miyakojima", m), 0)
-      + (compareMonths[monthsElapsed - 1] ? (salesFor("tsunashima", compareMonths[monthsElapsed - 1]) + salesFor("miyakojima", compareMonths[monthsElapsed - 1])) * dailyFraction : 0);
+    elapsedCmpTotal = compareMonths.slice(0, Math.max(0, monthsElapsed - 1)).reduce((a,m) => a + monthSumAllYR(m), 0)
+      + (compareMonths[monthsElapsed - 1] ? monthSumAllYR(compareMonths[monthsElapsed - 1]) * dailyFraction : 0);
     yoyTotal = elapsedCmpTotal ? (tgtTotal / elapsedCmpTotal * 100) : 0;
   } else {
     yoyTotal = cmpTotal ? (tgtTotal / cmpTotal * 100) : 0;
   }
 
+  // 全店舗の客数合算
+  const tgtCust = allStoresYR.reduce((a, sid) => a + fyC(targetMonths, sid), 0);
+  const cmpCust = allStoresYR.reduce((a, sid) => a + fyC(compareMonths, sid), 0);
+
   // === Headline KPIs ===
+  // 内訳: 各店舗の通年実績 (cmpFY) を列挙
+  const cmpBreakdown = allStoresYR
+    .map(sid => ({ name: DATA.stores[sid].short || DATA.stores[sid].name, v: cmpPerStore[sid] }))
+    .filter(x => x.v > 0)
+    .map(x => `${x.name} ${fmtM(x.v)}`)
+    .join(" + ");
   document.getElementById("annualHeadlineKpi").innerHTML = `
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">${cmpLabel} 通年実績</div>
       <div class="kpi-num text-2xl font-bold">${fmt(cmpTotal)}</div>
-      <div class="text-[11px] text-gray-500 mt-1">Hanabi 綱島店 ${fmtM(cmpTsu)} + ELLE by Hanabi 宮古島店 ${fmtM(cmpEle)}</div>
+      <div class="text-[11px] text-gray-500 mt-1">${cmpBreakdown || "—"}</div>
     </div>
     <div class="card p-4">
       <div class="text-xs text-gray-500 mb-1">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}実績</div>
@@ -1871,9 +1894,13 @@ function renderAnnualReport() {
         </div>
       </div>`;
   };
-  document.getElementById("annualStoreCompare").innerHTML =
-    buildStoreCompare("Hanabi 綱島店", cmpTsu, tgtTsu, tgtTsuBudget, projTsu) +
-    buildStoreCompare("ELLE by Hanabi 宮古島店", cmpEle, tgtEle, tgtEleBudget, projEle);
+  // 全店舗の per-store 比較カード (新店舗 OPEN対応)
+  document.getElementById("annualStoreCompare").innerHTML = allStoresYR
+    .filter(sid => cmpPerStore[sid] > 0 || tgtPerStore[sid] > 0)  // 両FY 0の店舗は非表示
+    .map(sid => {
+      const sBudget = isTargetCurrent ? (annualByStore[sid] || 0) : 0;
+      return buildStoreCompare(DATA.stores[sid].name, cmpPerStore[sid], tgtPerStore[sid], sBudget, projPerStore[sid]);
+    }).join("");
 
   // === Monthly chart ===
   drawAnnualChart(targetMonths, compareMonths, tgtLabel, cmpLabel);
@@ -1927,8 +1954,9 @@ function renderAnnualReport() {
     const sets = targetMonths.map(m => (menuData[m] || {})[sid] || []).filter(s => s.length);
     return aggregateMenuRows(sets);
   };
-  const cmpCombined = aggregateMenuRows([(cmpMenuRows.tsunashima || []), (cmpMenuRows.miyakojima || [])]);
-  const tgtCombined = aggregateMenuRows([tgtMenuFromMonths("tsunashima"), tgtMenuFromMonths("miyakojima")]);
+  // 全店舗のメニューを合算 (新店舗 OPEN対応)
+  const cmpCombined = aggregateMenuRows(allStoresYR.map(sid => cmpMenuRows[sid] || []));
+  const tgtCombined = aggregateMenuRows(allStoresYR.map(sid => tgtMenuFromMonths(sid)));
   const cmpTop = [...cmpCombined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
   const tgtTop = [...tgtCombined].sort((a,b) => (parseInt(b.total_price)||0) - (parseInt(a.total_price)||0)).slice(0, 10);
   const buildMenuTop = (title, top) => `
@@ -1954,10 +1982,9 @@ function renderAnnualReport() {
     const v = ((DATA.visitors_by_store || {})[sid] || {})[m];
     return a + (v ? (v[key] || 0) : 0);
   }, 0);
-  const cmpCust = cmpCustTsu + cmpCustEle;
-  const tgtCust = tgtCustTsu + tgtCustEle;
-  const cmpRepeat = visitFor(compareMonths, "tsunashima", "repeat") + visitFor(compareMonths, "miyakojima", "repeat");
-  const tgtRepeat = visitFor(targetMonths, "tsunashima", "repeat") + visitFor(targetMonths, "miyakojima", "repeat");
+  // 全店舗合算 (新店舗 OPEN対応)
+  const cmpRepeat = allStoresYR.reduce((a, sid) => a + visitFor(compareMonths, sid, "repeat"), 0);
+  const tgtRepeat = allStoresYR.reduce((a, sid) => a + visitFor(targetMonths, sid, "repeat"), 0);
   const cmpRepRate = cmpCust ? (cmpRepeat / cmpCust * 100) : 0;
   const tgtRepRate = tgtCust ? (tgtRepeat / tgtCust * 100) : 0;
   const cmpAvg = cmpCust ? Math.round(cmpTotal / cmpCust) : 0;
@@ -1999,11 +2026,12 @@ function drawAnnualChart(targetMonths, compareMonths, tgtLabel, cmpLabel) {
     const ms = (DATA.monthly_by_store[sid] || {})[ym];
     return ms ? ms.total_sales / 1000 : null;
   };
+  // 全店舗合算 (新店舗 OPEN対応)
+  const allStoresAC = Object.keys(DATA.stores || {});
   const sumStores = (m) => {
-    const t = salesFor("tsunashima", m);
-    const e = salesFor("miyakojima", m);
-    if (t === null && e === null) return null;
-    return (t || 0) + (e || 0);
+    const vals = allStoresAC.map(sid => salesFor(sid, m));
+    if (vals.every(v => v === null)) return null;
+    return vals.reduce((a, v) => a + (v || 0), 0);
   };
   const cmpData = compareMonths.map(sumStores);
   const tgtData = targetMonths.map(sumStores);
@@ -2940,27 +2968,29 @@ function renderFyProgress() {
     const ms = (DATA.monthly_by_store[sid] || {})[ym];
     return ms ? ms.total_sales : 0;
   };
-  const sumFY = (months, sid) => months.reduce((a, m) => a + salesFor(sid, m), 0);
-  const fy26Total = sumFY(fy26Months, "tsunashima") + sumFY(fy26Months, "miyakojima");
-  const fy25Total = sumFY(fy25Months, "tsunashima") + sumFY(fy25Months, "miyakojima");
+  // 全店舗合算 (新店舗 OPEN対応)
+  const allStoresFY = Object.keys(DATA.stores || {});
+  const sumFYAll = (months) => months.reduce((a, m) => a + allStoresFY.reduce((b, sid) => b + salesFor(sid, m), 0), 0);
+  const monthSumFY = (m) => allStoresFY.reduce((a, sid) => a + salesFor(sid, m), 0);
+  const fy26Total = sumFYAll(fy26Months);
+  const fy25Total = sumFYAll(fy25Months);
   const fy26Budget = ((DATA.budgets || {}).annual || {}).company || 0;
 
   // Months elapsed in FY26 (count months that have actual data)
   let monthsElapsed = 0;
   for (const m of fy26Months) {
-    const actual = salesFor("tsunashima", m) + salesFor("miyakojima", m);
-    if (actual > 0) monthsElapsed++;
+    if (monthSumFY(m) > 0) monthsElapsed++;
     else break;
   }
   // For currently-in-progress month, we have partial data — use ratio
   const dailyElapsedFraction = SCOPE.globalElapsedDays / SCOPE.daysInMonth;
-  const monthsEffective = monthsElapsed - 1 + dailyElapsedFraction;  // last month is partial
+  const monthsEffective = monthsElapsed - 1 + dailyElapsedFraction;
   const annualProjection = monthsEffective > 0 ? Math.round(fy26Total / monthsEffective * 12) : 0;
   const annualBudgetPct = fy26Budget ? (fy26Total / fy26Budget * 100) : 0;
   const annualProjPct = fy26Budget ? (annualProjection / fy26Budget * 100) : 0;
   // FY25 same period (months elapsed worth in FY25)
-  const fy25SamePeriod = fy25Months.slice(0, monthsElapsed - 1).reduce((a, m) => a + salesFor("tsunashima", m) + salesFor("miyakojima", m), 0)
-    + (fy25Months[monthsElapsed - 1] ? (salesFor("tsunashima", fy25Months[monthsElapsed - 1]) + salesFor("miyakojima", fy25Months[monthsElapsed - 1])) * dailyElapsedFraction : 0);
+  const fy25SamePeriod = fy25Months.slice(0, monthsElapsed - 1).reduce((a, m) => a + monthSumFY(m), 0)
+    + (fy25Months[monthsElapsed - 1] ? monthSumFY(fy25Months[monthsElapsed - 1]) * dailyElapsedFraction : 0);
   const yoyYtdPct = fy25SamePeriod ? (fy26Total / fy25SamePeriod * 100) : 0;
 
   root.innerHTML = `
@@ -3635,7 +3665,9 @@ function renderVisitsTab() {
     };
     let g3 = "";
     // 設計方針: 男女別の比率は店舗別で見るほうが意味ある (業態違いで混ぜると誤解)
+    // ナイスネイル店舗 (SC明細) には性別データなし → スキップ
     for (const r of SCOPE.storeRows) {
+      if (r.store.brand === "nicenail") continue;  // 男女比率データなし
       g3 += buildGenderCard(r.store.name, r.ms, storeGradient(r.sid));
     }
     root3.innerHTML = g3;
