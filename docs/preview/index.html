@@ -325,6 +325,8 @@
       </div>
       <div id="staffTabActions" class="flex items-center gap-2"></div>
     </div>
+    <!-- 未同期警告 (GitHub に push されていないローカル変更がある場合) -->
+    <div id="staffProfileUnsyncedBanner" class="hidden mb-3"></div>
     <div class="space-y-4" id="staffRankings"></div>
     <!-- 不定期スタッフ (master toggle) -->
     <div id="irregularStaffSection" class="hidden mt-6">
@@ -1170,6 +1172,7 @@ async function loadData() {
   const d = await r.json();
   DATA = d;
   mergeLocalRecruitOverrides();
+  mergeLocalStaffProfileOverrides();  // スタッフプロフィール 未同期 override も適用
   applyRetiredStaffFlag();
   document.getElementById("generatedAt").textContent = "generated " + d.generated_at;
   const pgen = document.getElementById("printGeneratedAt");
@@ -1203,7 +1206,8 @@ async function loadData() {
       const localStr = JSON.stringify(DATA.staff_profiles || {});
       if (JSON.stringify(remoteSp) !== localStr) {
         DATA.staff_profiles = remoteSp;
-        applyRetiredStaffFlag();  // 退職フラグ再適用
+        mergeLocalStaffProfileOverrides();  // remote 適用後 ローカル override を再適用
+        applyRetiredStaffFlag();
         if (document.querySelector('[data-panel="staff"].active')) renderStaffTab();
       }
     }
@@ -3787,6 +3791,41 @@ function getSortOptions(storeId) {
 }
 
 function renderStaffTab() {
+  // 未同期プロフィール 警告バナー
+  const banner = document.getElementById("staffProfileUnsyncedBanner");
+  if (banner) {
+    const overrides = _loadStaffProfileOverrides();
+    const unsyncedCount = Object.keys(overrides).length;
+    const hasToken = !!getGhToken();
+    if (unsyncedCount > 0 && currentRole === "master") {
+      const names = Object.entries(overrides).map(([n, v]) => v === "__deleted__" ? n + " (削除)" : n).join(", ");
+      banner.classList.remove("hidden");
+      banner.innerHTML = `
+        <div class="rounded-lg border-2 border-red-300 bg-red-50 p-4">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl flex-shrink-0">⚠️</span>
+            <div class="flex-1">
+              <div class="font-bold text-red-900 mb-1">${unsyncedCount}件のプロフィール変更が GitHub に保存されていません</div>
+              <div class="text-sm text-red-800 mb-2">
+                対象: ${names}<br>
+                ${!hasToken
+                  ? "GitHubトークンが未設定です。 ヘッダーの「GH」 ボタンからトークンを入力してください。"
+                  : "GitHub反映に失敗してる可能性 (トークン期限切れ等)。 下のボタンで再試行できます。"}
+              </div>
+              <div class="flex gap-2 flex-wrap">
+                <button onclick="retryUnsyncedStaffProfile()" class="text-xs bg-red-600 text-white rounded px-3 py-1.5 hover:bg-red-700">🔄 GitHub に再送信</button>
+                ${!hasToken ? `<button onclick="document.getElementById('ghTokenBtn').click()" class="text-xs bg-gray-100 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-200">⚙ GHトークン設定</button>` : ""}
+                <button onclick="if(confirm('プロフィールのローカル変更を破棄します。 よろしいですか?')) { localStorage.removeItem('hanabi_staff_profile_overrides_v1'); location.reload(); }" class="text-xs bg-white border border-red-300 text-red-700 rounded px-3 py-1.5 hover:bg-red-100">変更を破棄</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      banner.classList.add("hidden");
+      banner.innerHTML = "";
+    }
+  }
+
   const root = document.getElementById("staffRankings");
   root.innerHTML = SCOPE.storeRows.map(r => {
     const headerCls = storeGradient(r.sid);
@@ -4999,13 +5038,32 @@ function openStaffProfileModal(staffName, prefill) {
 function closeStaffProfileModal() {
   document.getElementById("staffProfileModal").classList.add("hidden");
 }
+// スタッフプロフィール localStorage オーバーライド (GitHub push失敗時の保護)
+function _staffProfileOverrideKey() { return "hanabi_staff_profile_overrides_v1"; }
+function _loadStaffProfileOverrides() {
+  try { return JSON.parse(localStorage.getItem(_staffProfileOverrideKey()) || "{}"); }
+  catch { return {}; }
+}
+function _saveStaffProfileOverrides(o) {
+  localStorage.setItem(_staffProfileOverrideKey(), JSON.stringify(o));
+}
+function mergeLocalStaffProfileOverrides() {
+  if (!DATA || !DATA.staff_profiles) return;
+  const o = _loadStaffProfileOverrides();
+  if (!o || !Object.keys(o).length) return;
+  DATA.staff_profiles.profiles = DATA.staff_profiles.profiles || {};
+  for (const [name, val] of Object.entries(o)) {
+    if (val === "__deleted__") {
+      delete DATA.staff_profiles.profiles[name];
+    } else {
+      DATA.staff_profiles.profiles[name] = val;
+    }
+  }
+}
+
 async function saveStaffProfileForm(e) {
   e.preventDefault();
   if (currentRole !== "master") return;
-  if (!getGhToken()) {
-    showToast("⚠️ GitHub トークン未設定", "error");
-    return;
-  }
   const originalName = document.getElementById("sp_originalName").value;
   const newName = document.getElementById("sp_name").value.trim();
   if (!newName) return;
@@ -5031,14 +5089,33 @@ async function saveStaffProfileForm(e) {
   }
   DATA.staff_profiles.profiles[newName] = profile;
 
+  // Optimistic save to localStorage (GitHub push失敗時の保護)
+  const overrides = _loadStaffProfileOverrides();
+  overrides[newName] = profile;
+  if (originalName && originalName !== newName) {
+    overrides[originalName] = "__deleted__";  // mark rename
+  }
+  _saveStaffProfileOverrides(overrides);
+
+  closeStaffProfileModal();
+  renderStaffTab();
+
+  if (!getGhToken()) {
+    showToast("⚠️ GitHub トークン未設定 — ローカル保存のみ。 GHボタンからトークン設定後 再送信できます", "warn");
+    return;
+  }
+
   showToast("保存中 → GitHub反映...", "info");
   try {
     await pushJsonToGitHub("data/staff_profiles.json", DATA.staff_profiles, `Update staff profile (${newName})`);
-    showToast("✓ プロフィール保存", "good");
-    closeStaffProfileModal();
-    renderStaffTab();
+    // 成功: localStorage から該当 override を削除
+    const o2 = _loadStaffProfileOverrides();
+    delete o2[newName];
+    if (originalName && originalName !== newName) delete o2[originalName];
+    _saveStaffProfileOverrides(o2);
+    showToast("✓ プロフィール保存 (GitHub反映)", "good");
   } catch (err) {
-    showToast("⚠️ 失敗: " + err.message, "error");
+    showToast("⚠️ GitHub反映失敗: " + err.message + " (ローカル保存は維持)", "error");
   }
 }
 async function deleteStaffProfile() {
@@ -5046,19 +5123,59 @@ async function deleteStaffProfile() {
   const name = document.getElementById("sp_originalName").value;
   if (!name) return;
   if (!confirm(`「${name}」 のプロフィールを削除しますか?`)) return;
-  if (!getGhToken()) { showToast("⚠️ GitHub トークン未設定", "error"); return; }
   delete DATA.staff_profiles.profiles[name];
+  // localStorage に削除フラグ
+  const overrides = _loadStaffProfileOverrides();
+  overrides[name] = "__deleted__";
+  _saveStaffProfileOverrides(overrides);
+  closeStaffProfileModal();
+  renderStaffTab();
+  if (!getGhToken()) {
+    showToast("⚠️ GitHub トークン未設定 — ローカル削除のみ", "warn");
+    return;
+  }
   try {
     await pushJsonToGitHub("data/staff_profiles.json", DATA.staff_profiles, `Delete staff profile (${name})`);
-    showToast("✓ 削除完了", "good");
-    closeStaffProfileModal();
-    renderStaffTab();
+    const o2 = _loadStaffProfileOverrides();
+    delete o2[name];
+    _saveStaffProfileOverrides(o2);
+    showToast("✓ 削除完了 (GitHub反映)", "good");
   } catch (err) {
-    showToast("⚠️ 失敗: " + err.message, "error");
+    showToast("⚠️ GitHub反映失敗: " + err.message + " (ローカル削除は維持)", "error");
+  }
+}
+
+// 未同期スタッフプロフィールを GitHub に再送信
+async function retryUnsyncedStaffProfile() {
+  if (currentRole !== "master") return;
+  if (!getGhToken()) {
+    showToast("⚠️ GitHubトークンが未設定です", "error");
+    return;
+  }
+  const overrides = _loadStaffProfileOverrides();
+  const count = Object.keys(overrides).length;
+  if (count === 0) {
+    showToast("未同期の変更はありません", "info");
+    return;
+  }
+  showToast(`${count}件のプロフィール変更を GitHub に再送信中...`, "info");
+  try {
+    await pushJsonToGitHub("data/staff_profiles.json", DATA.staff_profiles, `Resync staff profiles (${count} unsynced changes)`);
+    localStorage.removeItem(_staffProfileOverrideKey());
+    showToast(`✓ ${count}件 GitHub反映成功`, "good");
+    setTimeout(async () => {
+      const remote = await fetchRemoteStaffProfiles();
+      if (remote) DATA.staff_profiles = remote;
+      applyRetiredStaffFlag();
+      renderStaffTab();
+    }, 2000);
+  } catch (err) {
+    showToast("⚠️ 再送信失敗: " + err.message, "error");
   }
 }
 window.openStaffProfileModal = openStaffProfileModal;
 window.retryUnsyncedRecruit = retryUnsyncedRecruit;
+window.retryUnsyncedStaffProfile = retryUnsyncedStaffProfile;
 
 // 画像をクライアントサイドでリサイズ (最大400px) + base64 encode
 function resizeImageToBase64(file, maxDim = 400) {
