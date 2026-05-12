@@ -388,7 +388,7 @@
 
     <!-- Annual sales bar chart (multi-FY) -->
     <div class="card p-5 mb-5">
-      <h3 class="section-title mb-3">年度別 売上推移 <span class="section-sub">店舗別スタック + YoY成長率</span></h3>
+      <h3 class="section-title mb-3">年度別 売上推移 <span class="section-sub">店舗別スタック + 前年比成長率</span></h3>
       <div style="height:300px"><canvas id="growthAnnualChart"></canvas></div>
     </div>
 
@@ -1865,7 +1865,7 @@ function renderAnnualReport() {
       <div class="text-[11px] mt-1">vs ${cmpLabel}: <span class="${projection >= cmpTotal ? 'pct-good' : 'pct-bad'} font-semibold">${cmpTotal ? (projection >= cmpTotal ? '▲ +' : '▼ ') + fmt(Math.abs(projection - cmpTotal)) : '—'}</span></div>
     </div>
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">${isTargetInProgress ? 'YTD前年同期比' : 'YoY'}</div>
+      <div class="text-xs text-gray-500 mb-1">${isTargetInProgress ? 'FY累計 vs 前年同期' : '前年比'}</div>
       <div class="kpi-num text-2xl font-bold ${pctClass(yoyTotal)}">${(isTargetInProgress ? elapsedCmpTotal : cmpTotal) ? yoyTotal.toFixed(1)+'%' : '—'}</div>
       <div class="text-[11px] text-gray-500 mt-1">${cmpLabel} 同期 ${fmt(Math.round(isTargetInProgress ? elapsedCmpTotal : cmpTotal))}</div>
     </div>`;
@@ -1943,7 +1943,7 @@ function renderAnnualReport() {
           <th class="text-right py-2 px-3">${cmpLabel} 通年</th>
           <th class="text-right py-2 px-3">${tgtLabel} ${isTargetInProgress ? '累計' : '通年'}</th>
           ${isTargetInProgress ? `<th class="text-right py-2 px-3">${tgtLabel} 着地予測</th>` : ""}
-          <th class="text-right py-2 pl-3">YoY</th>
+          <th class="text-right py-2 pl-3">前年比</th>
         </tr>
       </thead>
       <tbody>
@@ -2675,7 +2675,7 @@ function renderMenuTab() {
   const menuData = DATA.menu_data || {};
   const labels = Object.keys(menuData).sort();
   if (!labels.length) {
-    document.getElementById("menuStatus").textContent = "データなし。scripts/scrape_menu.py を実行してください";
+    document.getElementById("menuStatus").textContent = "メニュー別データなし — 翌朝の自動取得で反映されます";
     return;
   }
   // FY annual + FY26 progress + monthly (latest first)
@@ -2888,7 +2888,7 @@ function drawMenu() {
   const mom_available = !!prevMonthOf(period);
   const isMTD = /^\d{6}MTD$/.test(period);
   const queryNote = query ? ` · 検索 <strong>"${query}"</strong>` : "";
-  const momNote = mom_available ? (isMTD ? " · 前月比 (経過日数で按分済)" : " · 前月比あり") : " · 前月比なし (annual)";
+  const momNote = mom_available ? (isMTD ? " · 前月比 (経過日数で按分済)" : " · 前月比あり") : " · 前月比なし (年通算)";
   status.innerHTML = `期間 <strong>${period}</strong>${momNote}${queryNote}`;
 
   root.innerHTML = scopes.map((sc, i) => {
@@ -3159,7 +3159,7 @@ function renderFyProgress() {
       <div class="text-[11px] mt-2 ${(annualProjection - fy26Budget) >= 0 ? 'pct-good' : 'pct-bad'} font-semibold">${annualProjection >= fy26Budget ? "達成見込み" : `▼ ${fmt(Math.abs(annualProjection - fy26Budget))}`}</div>
     </div>
     <div class="card p-4">
-      <div class="text-xs text-gray-500 mb-1">YTD前年同期比</div>
+      <div class="text-xs text-gray-500 mb-1">FY累計 vs 前年同期</div>
       <div class="text-2xl font-bold kpi-num ${pctClass(yoyYtdPct)}">${fy25SamePeriod ? yoyYtdPct.toFixed(1) + "%" : "—"}</div>
       <div class="text-xs mt-1 text-gray-500">FY25 同期 ${fmt(Math.round(fy25SamePeriod))}</div>
       <div class="text-[11px] text-gray-500 mt-2">FY25 通期実績: ${fmt(fy25Total)}</div>
