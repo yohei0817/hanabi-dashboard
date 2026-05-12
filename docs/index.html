@@ -256,7 +256,7 @@
   <div class="tab-panel" data-panel="sales">
     <div class="mb-4">
       <h2 class="text-2xl font-bold">売上・予算</h2>
-      <div class="text-sm text-gray-500 mt-1">店舗別予算進捗 / 部門別 (ELLE by Hanabi 宮古島店) / 日別推移</div>
+      <div class="text-sm text-gray-500 mt-1">店舗別 予算進捗 + 部門別内訳 + 日別推移</div>
     </div>
     <div class="grid md:grid-cols-2 gap-3 mb-5" id="salesStoreCards"></div>
     <div class="card p-5 mb-5">
@@ -525,8 +525,7 @@
     <div class="mb-5 text-xs bg-amber-50 border-l-4 border-amber-400 px-3 py-2.5 flex items-start gap-2">
       <span class="text-base">📅</span>
       <div>
-        <strong class="text-amber-800">月1回更新です</strong> — 毎月1日朝に自動取得 (Uレジスクレイプ重いため日次更新せず)。 急ぎで最新が必要な時は手動で
-        <code class="bg-white px-1 rounded mx-1 text-[11px]">python3 scripts/scrape_jouhou.py [week|age|lost|repeat] YYYYMM</code>
+        <strong class="text-amber-800">月1回更新</strong> — 毎月1日朝に自動取得されます。
       </div>
     </div>
 
@@ -584,14 +583,13 @@
             <option value="closed_negative">辞退・不採用</option>
           </select>
           <button id="recruitAddBtn" class="hidden text-xs bg-black text-white rounded px-3 py-1 hover:bg-gray-800 transition">+ 候補者を追加</button>
-          <button id="recruitExportBtn" class="hidden text-xs bg-gray-100 border border-gray-300 rounded px-3 py-1 hover:bg-gray-200 transition" title="recruitment.json をダウンロード">JSON出力</button>
         </div>
       </div>
       <div class="overflow-x-auto" id="recruitList"></div>
     </div>
 
     <div class="text-[11px] text-gray-400 text-center" id="recruitFooterNote">
-      候補者データの追加・編集は <code class="bg-gray-100 px-1 rounded">data/recruitment.json</code> を直接編集 (本部のみ)
+      候補者の追加・編集は本部権限のみ。 編集内容は GitHub に自動保存されます。
     </div>
   </div>
 
@@ -1232,14 +1230,17 @@ function computeScope(month) {
   if (globalElapsedDays === 0) globalElapsedDays = daysInMonth;
 
   const storeRows = [];
-  // open_date 以前の月では店舗を全UIから除外 (新店舗開店前の安全ガード)
+  const todayISO = new Date().toISOString().slice(0,10);
   const monthFirstDay = `${month.slice(0,4)}-${month.slice(4,6)}-01`;
   for (const sid of Object.keys(stores)) {
     const st = stores[sid];
+    let isBeforeOpen = false;
     if (st.open_date) {
-      // 表示月の月末まで に open_date が来てなければ完全非表示
+      // 表示月の月末まで に open_date が来てなければ完全非表示 (= 過去月で未開店)
       const lastDayOfMonth = `${month.slice(0,4)}-${month.slice(4,6)}-${String(daysInMonth).padStart(2,'0')}`;
       if (st.open_date > lastDayOfMonth) continue;
+      // 当月内に open_date があり、 まだ open_date 到達前 = OPEN前準備中
+      if (st.open_date > todayISO) isBeforeOpen = true;
     }
     const ms = (DATA.monthly_by_store[sid] || {})[month];
     const ds = (DATA.daily_by_store[sid] || {})[month] || [];
@@ -1259,13 +1260,15 @@ function computeScope(month) {
     const prevMonthSales = prevMs ? prevMs.total_sales : 0;
     // Last day's sales (most recent day with sales > 0)
     const lastDay = [...ds].reverse().find(d => d.sales > 0) || null;
-    storeRows.push({ sid, store: stores[sid], ms, ds, vis, daySales, monthlyTarget, elapsedTarget, sales, customers, fyAnnual, prevYearAnnual, prevMonthSales, prevYM, lastDay });
+    storeRows.push({ sid, store: stores[sid], ms, ds, vis, daySales, monthlyTarget, elapsedTarget, sales, customers, fyAnnual, prevYearAnnual, prevMonthSales, prevYM, lastDay, isBeforeOpen });
   }
 
   let totals = { sales: 0, target: 0, expected: 0, customers: 0, staff: 0, fyAnnual: 0, prevYearAnnual: 0, prevMonthSales: 0, prevMonthSalesSameStore: 0, salesSameStore: 0, lastDaySales: 0 };
   let cVis = { new: 0, repeat: 0, referral: 0, customers: 0 };
   let cMs = { tech_customers_nominated: 0, tech_customers_free: 0, tech_sales_nominated: 0, tech_sales_free: 0, tech_customers_male: 0, tech_customers_female: 0, tech_sales_male: 0, tech_sales_female: 0, customers: 0, total_sales: 0, by_dept: {ヘア:{sales:0},アイ:{sales:0},ネイル:{sales:0}} };
   for (const r of storeRows) {
+    // OPEN前店舗 は全社集計から除外 (0数値で全社ペースを引き下げない)
+    if (r.isBeforeOpen) continue;
     totals.sales += r.sales;
     totals.target += r.monthlyTarget;
     totals.expected += r.elapsedTarget;
@@ -2258,7 +2261,7 @@ function renderRecruitTab() {
     });
     const root = document.getElementById("recruitList");
     if (!filtered.length) {
-      root.innerHTML = `<div class="text-center text-sm text-gray-400 py-12">該当候補者なし<br><span class="text-[11px]">data/recruitment.json に候補者を追加してください</span></div>`;
+      root.innerHTML = `<div class="text-center text-sm text-gray-400 py-12">該当候補者なし<br><span class="text-[11px]">右上の「+ 候補者を追加」 から登録できます (本部のみ)</span></div>`;
       return;
     }
     const statusBadge = (s) => {
@@ -2318,7 +2321,7 @@ function renderRecruitTab() {
   if (currentRole === "master") {
     if (addBtn) { addBtn.classList.remove("hidden"); addBtn.onclick = () => openRecruitModal(null); }
     if (expBtn) { expBtn.classList.remove("hidden"); expBtn.onclick = exportRecruitJson; }
-    if (note) note.innerHTML = `候補者をクリックで編集 · ローカル変更は <code class="bg-gray-100 px-1 rounded">JSON出力</code> で <code class="bg-gray-100 px-1 rounded">data/recruitment.json</code> に反映してください`;
+    if (note) note.innerHTML = `行をクリックで詳細・編集 (本部のみ)。 変更は自動で GitHub に反映されます。`;
   }
   drawList();
 }
@@ -2962,8 +2965,9 @@ function renderAlerts() {
     }
   }
 
-  // 3. 店舗別ペース異常
+  // 3. 店舗別ペース異常 (OPEN前店舗は除外)
   for (const r of SCOPE.storeRows) {
+    if (r.isBeforeOpen) continue;  // OPEN前店舗はアラート対象外
     if (!r.elapsedTarget) continue;
     const sp = (r.sales / r.elapsedTarget * 100);
     if (sp < 75) {
@@ -2993,8 +2997,9 @@ function renderAlerts() {
     }
   }
 
-  // 5. リピート率異常
+  // 5. リピート率異常 (OPEN前店舗は除外)
   for (const r of SCOPE.storeRows) {
+    if (r.isBeforeOpen) continue;
     if (!r.vis || !r.vis.customers) continue;
     const rate = r.vis.repeat / r.vis.customers * 100;
     if (rate < 50 && r.sid === "tsunashima") {  // 綱島は伝統的に高リピート
@@ -3223,6 +3228,21 @@ function renderStoreCompare() {
   const root = document.getElementById("storeCompare");
   root.innerHTML = SCOPE.storeRows.map(r => {
     const headerCls = storeGradient(r.sid);
+    // OPEN前店舗は準備中プレースホルダー
+    if (r.isBeforeOpen) {
+      const daysUntilOpen = Math.ceil((new Date(r.store.open_date) - new Date()) / (1000*60*60*24));
+      return `<div class="card overflow-hidden">
+        <div class="${headerCls} text-white px-4 py-3">
+          <div class="font-bold">${r.store.name}</div>
+          <div class="text-xs opacity-80 mt-0.5">${r.store.departments.join(" / ")}${r.store.departments.length === 1 ? "専門" : ""}</div>
+        </div>
+        <div class="p-8 text-center">
+          <div class="inline-block px-4 py-2 rounded-full bg-amber-50 border-2 border-amber-200 text-amber-800 text-sm font-bold mb-3">🚧 OPEN前準備中</div>
+          <div class="kpi-num text-3xl font-bold text-gray-800 mb-1">${r.store.open_date}</div>
+          <div class="text-xs text-gray-500">OPEN予定 · あと ${daysUntilOpen}日</div>
+        </div>
+      </div>`;
+    }
     const monthPct = r.monthlyTarget ? (r.sales / r.monthlyTarget * 100) : 0;
     const pacePctV = r.elapsedTarget ? (r.sales / r.elapsedTarget * 100) : 0;
     const projection = SCOPE.globalElapsedDays ? Math.round(r.sales / SCOPE.globalElapsedDays * SCOPE.daysInMonth) : 0;
@@ -3498,6 +3518,22 @@ function renderSalesTab() {
   const root = document.getElementById("salesStoreCards");
   root.innerHTML = SCOPE.storeRows.map(r => {
     const headerCls = storeGradient(r.sid);
+    // OPEN前店舗は準備中プレースホルダー
+    if (r.isBeforeOpen) {
+      const daysUntilOpen = Math.ceil((new Date(r.store.open_date) - new Date()) / (1000*60*60*24));
+      return `<div class="card overflow-hidden">
+        <div class="${headerCls} text-white px-4 py-3">
+          <div class="font-bold">${r.store.name}</div>
+          <div class="text-xs opacity-80 mt-0.5">${r.store.departments.join(" / ")}${r.store.departments.length === 1 ? "専門" : ""}</div>
+        </div>
+        <div class="p-8 text-center">
+          <div class="inline-block px-4 py-2 rounded-full bg-amber-50 border-2 border-amber-200 text-amber-800 text-sm font-bold mb-3">🚧 OPEN前準備中</div>
+          <div class="kpi-num text-3xl font-bold text-gray-800 mb-1">${r.store.open_date}</div>
+          <div class="text-xs text-gray-500 mb-4">OPEN予定 · あと ${daysUntilOpen}日</div>
+          <div class="text-xs text-gray-500">月予算 ${fmtM(r.monthlyTarget)} (OPEN以降の3日分)</div>
+        </div>
+      </div>`;
+    }
     const ms = r.ms;
     const departments = r.store.departments;
     const showDept = departments.length > 1 && ms;
@@ -3897,6 +3933,17 @@ function renderStaffTab() {
   const root = document.getElementById("staffRankings");
   root.innerHTML = SCOPE.storeRows.map(r => {
     const headerCls = storeGradient(r.sid);
+    // OPEN前店舗は準備中
+    if (r.isBeforeOpen) {
+      const daysUntilOpen = Math.ceil((new Date(r.store.open_date) - new Date()) / (1000*60*60*24));
+      return `<div class="card overflow-hidden">
+        <div class="${headerCls} text-white px-4 py-3 font-bold">${r.store.name}</div>
+        <div class="p-8 text-center">
+          <div class="inline-block px-4 py-2 rounded-full bg-amber-50 border-2 border-amber-200 text-amber-800 text-sm font-bold mb-3">🚧 OPEN前準備中</div>
+          <div class="text-sm text-gray-500">${r.store.open_date} OPEN予定 (あと ${daysUntilOpen}日)<br>OPEN後にスタッフ実績が表示されます</div>
+        </div>
+      </div>`;
+    }
     const rows = (DATA.staff_rows || []).filter(s => s.store === r.sid && s.month === currentMonth && !s.hidden);
     if (!rows.length) return `<div class="card p-6 text-center text-gray-500">${r.store.name}: データなし</div>`;
     return `
@@ -4517,8 +4564,8 @@ function renderManagementTab() {
     }
     if (!lastHP && !lastIG) {
       extEl.innerHTML = `<div class="text-sm text-gray-400 py-4 text-center">
-        データ未取得 — <code class="bg-gray-100 px-1 rounded">python3 scripts/scrape_external.py all</code> で取得開始<br>
-        <span class="text-[11px]">初回は data/external_targets.json に URL 登録が必要</span>
+        外部メディアデータ未取得<br>
+        <span class="text-[11px]">HotPepper / Instagram の URL 登録後、 毎月1日に自動取得されます</span>
       </div>`;
     } else {
       const cards = SCOPE.storeRows.map(r => {
@@ -4920,11 +4967,8 @@ function renderCustomersSubtab(subtab) {
       <div class="card p-8 text-center">
         <div class="text-2xl mb-2">📊</div>
         <h3 class="font-bold mb-2">${info.name} データなし</h3>
-        <p class="text-sm text-gray-500 mb-4">${info.desc}</p>
-        <div class="bg-gray-50 rounded px-4 py-3 text-xs text-left max-w-md mx-auto font-mono">
-          $ python3 scripts/scrape_jouhou.py ${reportKey} 202605
-        </div>
-        <p class="text-[11px] text-gray-400 mt-3">スクレイプ後 auto-deploy で data.json に反映 → このタブで表示</p>
+        <p class="text-sm text-gray-500 mb-2">${info.desc}</p>
+        <p class="text-[11px] text-gray-400 mt-3">来月1日の自動取得後に表示されます</p>
       </div>`;
     return;
   }
@@ -4944,11 +4988,9 @@ function renderCustomersSubtab(subtab) {
     const daysAgo = Math.floor((Date.now() - new Date(latestScrapedAt).getTime()) / (1000 * 60 * 60 * 24));
     const dateStr = latestScrapedAt.slice(0, 10);
     if (daysAgo > 40) {
-      stalenessLabel = `<span class="text-red-600 font-semibold">⚠️ 最終取得 ${dateStr} (${daysAgo}日前 — 更新推奨)</span>`;
-    } else if (daysAgo > 10) {
-      stalenessLabel = `<span class="text-yellow-700">最終取得 ${dateStr} (${daysAgo}日前)</span>`;
+      stalenessLabel = `<span class="text-red-600 font-semibold">⚠️ 最終更新 ${dateStr} (${daysAgo}日前)</span>`;
     } else {
-      stalenessLabel = `<span class="text-green-600">最終取得 ${dateStr} (${daysAgo}日前)</span>`;
+      stalenessLabel = `<span class="text-gray-500">最終更新 ${dateStr}</span>`;
     }
   }
   const periodOpts = availablePeriods.map(p => `<option value="${p}">${p}</option>`).join("");
@@ -5030,11 +5072,9 @@ function renderCustomersSubtab(subtab) {
           <div class="${headerCls} text-white px-4 py-3 font-bold">${store.name}</div>
           <div class="p-6 text-center">
             <div class="text-2xl mb-2 opacity-40">📊</div>
-            <div class="text-sm text-gray-600 font-semibold mb-1">レポート個別最適化 未対応</div>
+            <div class="text-sm text-gray-600 font-semibold mb-1">このレポートは準備中</div>
             <div class="text-[11px] text-gray-500 leading-relaxed">
-              現在 scrape_jouhou.py は generic 取得のみ。<br>
-              ${activeTab === "_default" ? "「" + (info?.name || "このレポート") + "」 " : "サブタブ 「" + activeTab + "」 "}は 専用 parser 未実装のため <br>意味あるデータが取れていません。<br>
-              <span class="text-[10px] text-gray-400 inline-block mt-2">scrape結果: ${rows.length}行 (cells配列形式)</span>
+              ${activeTab === "_default" ? "「" + (info?.name || "このレポート") + "」 " : "サブタブ 「" + activeTab + "」 "}の詳細表示は順次対応予定です。
             </div>
           </div>
         </div>`;
