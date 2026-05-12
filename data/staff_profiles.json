@@ -122,8 +122,11 @@
     "金山 隆介": {
       "display_name": "KAMA",
       "photo": "KAMA.jpg",
-      "retired": "2026-04-01",
-      "_note": "宮古島アイ、 退職済 (CSV最終 202603)。 退職日は推定値"
+      "kana": "カナヤマ リュウスケ",
+      "role": "アイリスト",
+      "employment_type": "パート",
+      "irregular": true,
+      "_note": "宮古島アイ、 不定期出勤のパート (CSV最終 202603)"
     }
   }
 }

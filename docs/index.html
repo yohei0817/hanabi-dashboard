@@ -318,11 +318,11 @@
       <div id="staffTabActions" class="flex items-center gap-2"></div>
     </div>
     <div class="space-y-4" id="staffRankings"></div>
-    <!-- 業務委託・不定期 (master toggle) -->
+    <!-- 不定期スタッフ (master toggle) -->
     <div id="irregularStaffSection" class="hidden mt-6">
       <div class="card overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between" style="background:#FFFBEB">
-          <h3 class="section-title">業務委託・不定期スタッフ <span class="section-sub">退職ではない / 不定期出勤</span></h3>
+          <h3 class="section-title">不定期スタッフ <span class="section-sub">業務委託・パート (退職ではない・不定期出勤)</span></h3>
           <span class="text-xs text-gray-400" id="irregularStaffCount"></span>
         </div>
         <div class="p-4" id="irregularStaffList"></div>
@@ -657,9 +657,9 @@
         <label class="block bg-amber-50 border border-amber-200 rounded p-2.5">
           <div class="flex items-center gap-2">
             <input type="checkbox" id="sp_irregular" class="w-4 h-4" />
-            <span class="text-xs font-semibold text-amber-800">業務委託・不定期</span>
+            <span class="text-xs font-semibold text-amber-800">不定期出勤</span>
           </div>
-          <div class="text-[11px] text-gray-600 mt-1 ml-6">退職ではないが、 不定期出勤の業務委託の場合にチェック。 退職スタッフリストには出ない</div>
+          <div class="text-[11px] text-gray-600 mt-1 ml-6">退職ではないが、 不定期出勤 (業務委託・パート等) の場合にチェック。 退職スタッフリストには出ない</div>
         </label>
         <div>
           <span class="text-xs text-gray-600">写真</span>
@@ -3654,7 +3654,7 @@ function renderStaffTab() {
     const irrShown = !document.getElementById("irregularStaffSection").classList.contains("hidden");
     const retShown = !document.getElementById("retiredStaffSection").classList.contains("hidden");
     actionsEl.innerHTML = `
-      <button id="toggleIrregularBtn" class="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded px-3 py-1.5">${irrShown ? "業務委託を隠す" : "業務委託・不定期 (本部のみ)"}</button>
+      <button id="toggleIrregularBtn" class="text-xs bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded px-3 py-1.5">${irrShown ? "不定期スタッフを隠す" : "不定期スタッフ (本部のみ)"}</button>
       <button id="toggleRetiredBtn" class="text-xs bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded px-3 py-1.5">${retShown ? "退職者を隠す" : "退職者も表示 (本部のみ)"}</button>`;
     document.getElementById("toggleIrregularBtn").onclick = () => {
       const sec = document.getElementById("irregularStaffSection");
@@ -3767,12 +3767,17 @@ function renderIrregularStaffList() {
     const storeName = info ? DATA.stores[info.store]?.name : "—";
     const avatar = info ? staffAvatar(info, 48) : `<div class="rounded-full bg-gray-300" style="width:48px;height:48px"></div>`;
     const lastMonth = info ? `${info.month.slice(0,4)}/${info.month.slice(4,6)}` : "—";
+    const empType = profile.employment_type || "業務委託";
     return `<div class="flex items-center gap-3 p-3 border border-amber-200 rounded-lg hover:bg-amber-50" style="background:#FFFBF0">
       ${avatar}
       <div class="flex-1 min-w-0">
-        <div class="font-semibold text-sm truncate">${name}${profile.display_name && profile.display_name !== name ? ` <span class="text-xs text-gray-400">(${profile.display_name})</span>` : ""}</div>
+        <div class="flex items-center gap-1.5 mb-0.5">
+          <span class="font-semibold text-sm truncate">${name}</span>
+          ${profile.display_name && profile.display_name !== name ? `<span class="text-xs text-gray-400">(${profile.display_name})</span>` : ""}
+          <span class="text-[9px] font-bold px-1.5 py-0.5 rounded text-white" style="background:#D97706">${empType}</span>
+        </div>
         <div class="text-[11px] text-gray-500 truncate">${storeName} ${info?.primary_dept ? `· ${info.primary_dept}` : ""}${profile.role ? ` · ${profile.role}` : ""}</div>
-        <div class="text-[11px] text-amber-700 font-semibold">業務委託 · 最終出勤 ${lastMonth}</div>
+        <div class="text-[11px] text-amber-700 font-semibold">不定期 · 最終出勤 ${lastMonth}</div>
       </div>
       <button class="text-xs text-blue-600 hover:text-blue-800" onclick="openStaffProfileModal('${name.replace(/'/g,"\\'")}')">編集</button>
     </div>`;
