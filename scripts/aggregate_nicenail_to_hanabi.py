@@ -397,7 +397,7 @@ def main():
     print(f"=== ナイスネイル → HANABI 集約変換 (対象月: {ym}) ===")
     total_processed = 0
     for store_name_jp, hanabi_id in NICENAIL_TO_HANABI.items():
-        store_name_full = "ナイスネイル新横浜店"  # ハードコード (1店舗のみ想定)
+        store_name_full = "ナイスネイル 新横浜店"  # ハードコード (1店舗のみ想定)
         print(f"\n→ {store_name_jp} → {hanabi_id}")
         rows = read_meisai(store_name_jp, ym)
         if not rows:
