@@ -3223,10 +3223,11 @@ function renderStoreCompare() {
       </div>`;
     }
 
-    // Dept breakdown for ELLE only
+    // 複数部門店舗のみ部門別 (ELLE宮古島等)
     let deptHtml = "";
-    if (r.sid === "miyakojima" && r.ms) {
-      const monthDeptBudget = ((DATA.budgets || {}).monthly_dept_miyakojima || {})[currentMonth] || {};
+    const isMultiDeptCard = (r.store.departments || []).length > 1 && !r.store.independent_dept;
+    if (isMultiDeptCard && r.ms) {
+      const monthDeptBudget = ((DATA.budgets || {})[`monthly_dept_${r.sid}`] || {})[currentMonth] || {};
       const total = ["ヘア","アイ","ネイル"].reduce((a,d) => a + r.ms.by_dept[d].sales, 0) || 1;
       deptHtml = `<div class="mt-4 pt-4 border-t border-gray-100">
         <div class="text-xs font-semibold text-gray-500 mb-3">部門別売上</div>
@@ -3517,14 +3518,7 @@ function renderSalesTab() {
 
 function renderDeptBudgetTable() {
   const root = document.getElementById("deptBudgetTable");
-  const tsuMs = (DATA.monthly_by_store.tsunashima || {})[currentMonth];
-  const eleMs = (DATA.monthly_by_store.miyakojima || {})[currentMonth];
-  const tsuTarget = ((DATA.target_by_store || {}).tsunashima || {})[currentMonth] || 0;
-  const eleTarget = ((DATA.target_by_store || {}).miyakojima || {})[currentMonth] || 0;
-  const monthDeptBudget = ((DATA.budgets || {}).monthly_dept_miyakojima || {})[currentMonth] || {};
-
-  const tsuRow = SCOPE.storeRows.find(r => r.sid === "tsunashima");
-  const eleRow = SCOPE.storeRows.find(r => r.sid === "miyakojima");
+  // 旧コード (tsuRow/eleRow ハードコード) は廃止。 下の rows ループで SCOPE.storeRows を反復するので不要
 
   const buildRow = (opts) => {
     const { label, indent, sales, target, share, color, isStoreRow } = opts;
@@ -4643,7 +4637,8 @@ function buildSearchIndex() {
   // Stores
   for (const sid of Object.keys(DATA.stores || {})) {
     const store = DATA.stores[sid];
-    items.push({ type: "store", icon: sid === "miyakojima" ? "💜" : "💙", label: store.name, sub: store.departments.join(" / "), action: () => activateTab("sales") });
+    const storeIcon = store.brand === "elle" ? "💜" : store.brand === "nicenail" ? "🤎" : "💙";
+    items.push({ type: "store", icon: storeIcon, label: store.name, sub: store.departments.join(" / "), action: () => activateTab("sales") });
   }
   // Staff (current month, visible)
   const seenNames = new Set();
