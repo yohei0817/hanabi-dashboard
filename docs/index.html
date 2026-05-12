@@ -3157,9 +3157,11 @@ function renderStoreCompare() {
     const projDelta = projection - r.monthlyTarget;
     const w = r.monthlyTarget ? Math.min(100, (r.sales/r.monthlyTarget)*100) : 0;
     const paceW = r.monthlyTarget ? Math.min(100, (r.elapsedTarget/r.monthlyTarget)*100) : 0;
-    // 綱島-only: 技術/店販 + 指名/フリー + Top3 staff
+    // 単一部門の店舗 (綱島=ヘア専門 / 新横浜=ネイル専門 等) で表示
+    // 技術/店販 + 指名/フリー + Top3 staff
     let tsuExtraHtml = "";
-    if (r.sid === "tsunashima" && r.ms) {
+    const isSingleDept = (r.store.departments || []).length === 1;
+    if (isSingleDept && r.ms) {
       const ms = r.ms;
       const techRate = ms.total_sales ? (ms.tech_sales/ms.total_sales*100).toFixed(1) : 0;
       const shopRate = ms.total_sales ? (ms.shop_sales/ms.total_sales*100).toFixed(1) : 0;
@@ -3554,38 +3556,32 @@ function renderDeptBudgetTable() {
     </tr>`;
   };
 
-  // Total store sales (for company composition)
-  const companyTotal = (tsuRow?.sales || 0) + (eleRow?.sales || 0);
+  // Total store sales (for company composition) — 全店舗合算
+  const companyTotal = SCOPE.storeRows.reduce((a, r) => a + (r.sales || 0), 0);
 
   let rows = "";
-  // Hanabi 綱島
-  if (tsuRow) {
+  // 全店舗ループ (新店舗 OPEN対応)
+  for (const r of SCOPE.storeRows) {
+    const sTarget = ((DATA.target_by_store || {})[r.sid] || {})[currentMonth] || 0;
     rows += buildRow({
-      label: "Hanabi 綱島店",
-      sales: tsuRow.sales, target: tsuTarget,
-      share: companyTotal ? (tsuRow.sales/companyTotal*100).toFixed(1)+"%" : "—",
+      label: r.store.name,
+      sales: r.sales, target: sTarget,
+      share: companyTotal ? (r.sales/companyTotal*100).toFixed(1)+"%" : "—",
       isStoreRow: true,
     });
-  }
-  // ELLE 宮古島 (合計)
-  if (eleRow) {
-    rows += buildRow({
-      label: "ELLE by Hanabi 宮古島店",
-      sales: eleRow.sales, target: eleTarget,
-      share: companyTotal ? (eleRow.sales/companyTotal*100).toFixed(1)+"%" : "—",
-      isStoreRow: true,
-    });
-    // ELLE depts
-    if (eleMs) {
-      const eleStoreTotal = ["ヘア","アイ","ネイル"].reduce((a,d)=>a+eleMs.by_dept[d].sales, 0);
+    // 複数部門の店舗のみ部門別 sub-rows (ELLE宮古島等)
+    const isMultiDept = (r.store.departments || []).length > 1 && !r.store.independent_dept;
+    if (isMultiDept && r.ms) {
+      const deptBudgetMap = ((DATA.budgets || {})[`monthly_dept_${r.sid}`] || {})[currentMonth] || {};
+      const storeTotal = ["ヘア","アイ","ネイル"].reduce((a,d)=>a+r.ms.by_dept[d].sales, 0);
       ["ヘア","アイ","ネイル"].forEach(d => {
-        const sales = eleMs.by_dept[d].sales;
-        const target = monthDeptBudget[d] || 0;
+        const sales = r.ms.by_dept[d].sales;
+        const target = deptBudgetMap[d] || 0;
         const color = d==="ヘア" ? "var(--dept-hair)" : d==="アイ" ? "var(--dept-eye)" : "var(--dept-nail)";
         rows += buildRow({
           label: d, indent: true, color,
           sales, target,
-          share: eleStoreTotal ? (sales/eleStoreTotal*100).toFixed(1)+"% (店舗内)" : "—",
+          share: storeTotal ? (sales/storeTotal*100).toFixed(1)+"% (店舗内)" : "—",
         });
       });
     }
@@ -4238,9 +4234,10 @@ function renderManagementTab() {
       const custPct = totalCust ? (r.customers / totalCust * 100) : 0;
       const monthPct = r.monthlyTarget ? (r.sales / r.monthlyTarget * 100) : 0;
       const monthPctCls = monthPct >= 100 ? "pct-good" : monthPct >= 80 ? "pct-warn" : "pct-bad";
-      // ELLE 宮古島 のみ部門別 サブ行
+      // 複数部門店舗のみ部門別 サブ行 (ELLE 宮古島等)
       let deptDetail = "";
-      if (r.sid === "miyakojima" && r.ms) {
+      const isMultiDept = (r.store.departments || []).length > 1 && !r.store.independent_dept;
+      if (isMultiDept && r.ms) {
         const deptColors = { "ヘア": "#831843", "アイ": "#D63384", "ネイル": "#F9A8D4" };
         const deptRows = ["ヘア", "アイ", "ネイル"].map(d => {
           const dSales = (r.ms.by_dept[d] || {}).sales || 0;
@@ -4351,7 +4348,7 @@ function renderManagementTab() {
       const perStaff = staffCount ? Math.round(r.sales / staffCount) : 0;
       return `<tr class="border-b border-gray-100">
         <td class="py-2.5 pr-3 font-bold whitespace-nowrap">
-          <span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style="background:${r.sid === 'miyakojima' ? '#D63384' : '#1E88E5'}"></span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style="background:${storeChartColor(r.sid)}"></span>
           ${r.store.name}
         </td>
         <td class="py-2.5 px-3 text-right kpi-num">${fmt(r.sales)}</td>

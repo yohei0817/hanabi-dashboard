@@ -335,7 +335,9 @@ def build_menu_json(kaikei: dict, rows: list[dict]) -> list[dict]:
             "count": v["count"],
             "total_price": v["total_price"],
             "unit_price": unit_price,
-            "category": v["category"],
+            # HANABI menu format expects category_status_name (Uレジカラム名)
+            "category_status_name": v["category"],
+            "category": v["category"],  # 後方互換 + 検索用
             "year_on_year_price": "",
             "year_on_year_count": "",
         })
