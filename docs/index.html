@@ -2909,9 +2909,8 @@ function drawMenu() {
     }
     const totalSales = rows.reduce((a, r) => a + (parseInt(r.total_price) || 0), 0);
     const totalCount = rows.reduce((a, r) => a + (parseInt(r.count) || 0), 0);
-    const open = i === 0 ? "open" : "";  // expand first by default
-    // Auto-expand all sections that have matches when searching
-    const openWhenSearched = query && rows.length ? "open" : open;
+    // デフォルトは全部折りたたみ。 検索時のみマッチセクションを自動展開。
+    const openWhenSearched = query && rows.length ? "open" : "";
     return `
       <details ${openWhenSearched} class="card overflow-hidden">
         <summary class="${sc.headerCls} text-white px-4 py-3 flex items-center justify-between cursor-pointer list-none">
