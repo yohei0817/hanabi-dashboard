@@ -1571,11 +1571,11 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
   if (!el) return;
   if (window._chartGA) window._chartGA.destroy();
   const labels = fys.map(fy => `FY${fy}${isFYInProgress(fy) ? "*" : ""}`);
-  // 全店舗を STORES config から動的に
+  // 全店舗を STORES config から動的に (未開店FYは null で省略)
   const allStores = Object.keys(DATA.stores || {});
   const storeData = {};
   for (const sid of allStores) {
-    storeData[sid] = fys.map(fy => Math.round(fySales(fy, sid) / 1000));
+    storeData[sid] = fys.map(fy => storeExistedInFY(sid, fy) ? Math.round(fySales(fy, sid) / 1000) : null);
   }
   // YoY% labels (displayed above bars) — skip in-progress FY (partial year comparison misleads)
   const yoyLabels = fys.map((fy, i) => {
@@ -1607,12 +1607,15 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
       ctx.restore();
     }
   };
-  const datasets = allStores.map(sid => ({
-    label: DATA.stores[sid].name,
-    data: storeData[sid],
-    backgroundColor: storeChartColor(sid),
-    stack: "s", borderRadius: 4,
-  }));
+  // 1度でも存在した FY が有る店舗のみ凡例に出す
+  const datasets = allStores
+    .filter(sid => storeData[sid].some(v => v != null))
+    .map(sid => ({
+      label: DATA.stores[sid].name,
+      data: storeData[sid],
+      backgroundColor: storeChartColor(sid),
+      stack: "s", borderRadius: 4,
+    }));
   window._chartGA = new Chart(el.getContext("2d"), {
     type: "bar",
     data: { labels, datasets },
@@ -1640,13 +1643,16 @@ function drawGrowthCustomersChart(fys, fyCust, isFYInProgress) {
   const completedFys = fys.filter(fy => !isFYInProgress(fy));
   const labels = completedFys.map(fy => `FY${fy}`);
   const allStores = Object.keys(DATA.stores || {});
-  const datasets = allStores.map(sid => ({
-    label: DATA.stores[sid].name,
-    data: completedFys.map(fy => fyCust(fy, sid) || null),
-    borderColor: storeChartColor(sid),
-    backgroundColor: storeChartColorAlpha(sid, 0.1),
-    tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
-  }));
+  // 1度でも completedFys に存在した店舗のみ
+  const datasets = allStores
+    .filter(sid => completedFys.some(fy => storeExistedInFY(sid, fy)))
+    .map(sid => ({
+      label: DATA.stores[sid].name,
+      data: completedFys.map(fy => storeExistedInFY(sid, fy) ? (fyCust(fy, sid) || null) : null),
+      borderColor: storeChartColor(sid),
+      backgroundColor: storeChartColorAlpha(sid, 0.1),
+      tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
+    }));
   window._chartGC = new Chart(el.getContext("2d"), {
     type: "line",
     data: { labels, datasets },
@@ -1674,17 +1680,20 @@ function drawGrowthAvgTicketChart(fys, fySales, fyCust, isFYInProgress) {
     return cust > 0 ? Math.round(sales / cust) : null;
   };
   const allStores2 = Object.keys(DATA.stores || {});
-  const datasetsT = allStores2.map(sid => {
-    const st = DATA.stores[sid];
-    const subtitle = (st.departments && st.departments.length > 1) ? "トータルビューティ" : (st.departments?.[0] || "");
-    return {
-      label: `${st.name}${subtitle ? ` (${subtitle})` : ""}`,
-      data: completedFys.map(fy => ticketFor(fy, sid)),
-      borderColor: storeChartColor(sid),
-      backgroundColor: storeChartColorAlpha(sid, 0.1),
-      tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
-    };
-  });
+  // 1度でも completedFys に存在した店舗のみ
+  const datasetsT = allStores2
+    .filter(sid => completedFys.some(fy => storeExistedInFY(sid, fy)))
+    .map(sid => {
+      const st = DATA.stores[sid];
+      const subtitle = (st.departments && st.departments.length > 1) ? "トータルビューティ" : (st.departments?.[0] || "");
+      return {
+        label: `${st.name}${subtitle ? ` (${subtitle})` : ""}`,
+        data: completedFys.map(fy => storeExistedInFY(sid, fy) ? ticketFor(fy, sid) : null),
+        borderColor: storeChartColor(sid),
+        backgroundColor: storeChartColorAlpha(sid, 0.1),
+        tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
+      };
+    });
   window._chartGT = new Chart(el.getContext("2d"), {
     type: "line",
     data: { labels, datasets: datasetsT },
@@ -3495,8 +3504,8 @@ function renderVisitDonut() {
   const root = document.getElementById("visitDonutRow");
   if (!root) return;
   // 設計方針: リピート率は業態違いで混ぜると誤解 → 店舗別のみ
-  // SCOPE.storeRows は既に open_date guard 済 (新店舗 OPEN前は含まれない)
-  const scopes = SCOPE.storeRows.map(r => ({
+  // OPEN前店舗は除外 (0顧客でドーナツが空表示になる)
+  const scopes = SCOPE.storeRows.filter(r => !r.isBeforeOpen).map(r => ({
     id: r.sid, title: r.store.name, vis: r.vis, headerCls: storeGradient(r.sid),
   }));
   root.innerHTML = scopes.map(s => `
@@ -3669,8 +3678,9 @@ function renderDeptBudgetTable() {
   const companyTotal = SCOPE.storeRows.reduce((a, r) => a + (r.sales || 0), 0);
 
   let rows = "";
-  // 全店舗ループ (新店舗 OPEN対応)
+  // 全店舗ループ (OPEN前店舗は除外、 月次予算vs実績テーブルに 0実績ノイズを出さない)
   for (const r of SCOPE.storeRows) {
+    if (r.isBeforeOpen) continue;
     const sTarget = ((DATA.target_by_store || {})[r.sid] || {})[currentMonth] || 0;
     rows += buildRow({
       label: r.store.name,
@@ -3748,7 +3758,9 @@ function renderVisitsTab() {
   };
   let v1 = "";
   // 設計方針: 全社合算は新規/リピート比率では意味が薄い (業態差) → 店舗別のみ
+  // OPEN前店舗は除外
   for (const r of SCOPE.storeRows) {
+    if (r.isBeforeOpen) continue;
     v1 += buildVisCard(r.store.name, r.vis, storeGradient(r.sid));
   }
   root1.innerHTML = v1;
@@ -3789,7 +3801,9 @@ function renderVisitsTab() {
   };
   let n2 = "";
   // 設計方針: 指名率は店舗別で見るほうが意味ある (業態違いで混ぜると誤解)
+  // OPEN前店舗は除外
   for (const r of SCOPE.storeRows) {
+    if (r.isBeforeOpen) continue;
     n2 += buildNomCard(r.store.name, r.ms, storeGradient(r.sid));
   }
   root2.innerHTML = n2;
@@ -3873,6 +3887,21 @@ function storeChartColorAlpha(sid, alpha = 0.1) {
   const g = parseInt(hex.slice(3,5), 16);
   const b = parseInt(hex.slice(5,7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// 店舗が指定月/FY に「既に存在してた」 か判定 (open_date ベース)
+// → 過去FYのチャート/データから 未開店店舗を除外するために使う
+function storeExistedInMonth(sid, ym) {
+  const st = (DATA.stores || {})[sid];
+  if (!st || !st.open_date) return true;
+  const daysInM = ((DATA.days_in_month) || {})[ym] || 31;
+  const lastDay = `${ym.slice(0,4)}-${ym.slice(4,6)}-${String(daysInM).padStart(2,'0')}`;
+  return st.open_date <= lastDay;
+}
+function storeExistedInFY(sid, fy) {
+  // FY=N covers May N - April N+1
+  const fyEndYM = `${fy+1}04`;
+  return storeExistedInMonth(sid, fyEndYM);
 }
 
 const SORT_OPTIONS = [
@@ -4312,21 +4341,22 @@ function renderManagementTab() {
   `;
 
   // 店舗別 売上構成比 (ネスト型 doughnut)
-  // 内輪: 全店舗 (動的)
+  // 内輪: 全店舗 (OPEN前店舗は除外、 0比率でパイが歪まないように)
   // 外輪: 各店舗の部門別分割 (departments が複数ある店舗のみ細分化、 ELLE宮古島など)
   const compositionEl = document.getElementById("mgmtCompositionChart");
   if (compositionEl) {
     if (window._chartMgmtComp) window._chartMgmtComp.destroy();
-    // 内輪 データ (全店舗)
+    // 内輪 データ (OPEN前店舗 + 0売上店舗 は除外)
+    const activeRows = SCOPE.storeRows.filter(r => !r.isBeforeOpen && r.sales > 0);
     const innerData = [], innerLabels = [], innerColors = [];
-    for (const r of SCOPE.storeRows) {
+    for (const r of activeRows) {
       innerData.push(r.sales);
       innerLabels.push(r.store.name);
       innerColors.push(storeChartColor(r.sid));
     }
     // 外輪 データ (部門が複数の店舗は分割、 単一は店舗そのまま)
     const outerData = [], outerLabels = [], outerColors = [];
-    for (const r of SCOPE.storeRows) {
+    for (const r of activeRows) {
       const depts = r.store.departments || [];
       const multi = depts.length > 1 && r.ms && !r.store.independent_dept;
       if (multi) {
@@ -4492,7 +4522,8 @@ function renderManagementTab() {
   // ベンチマーク表 (店舗パフォーマンス比較)
   const benchEl = document.getElementById("mgmtBenchmark");
   if (benchEl) {
-    const rowsHtml = SCOPE.storeRows.map(r => {
+    // OPEN前店舗は比較表から除外 (0数字でノイズ)
+    const rowsHtml = SCOPE.storeRows.filter(r => !r.isBeforeOpen).map(r => {
       const monthlyTarget = r.monthlyTarget || 0;
       const pacePctV = r.elapsedTarget ? (r.sales / r.elapsedTarget * 100) : 0;
       const projection = SCOPE.globalElapsedDays ? Math.round(r.sales / SCOPE.globalElapsedDays * SCOPE.daysInMonth) : 0;
@@ -4675,7 +4706,8 @@ function renderManagementTab() {
       const pm = m === 1 ? 12 : m - 1;
       return `${py}${String(pm).padStart(2,"0")}`;
     })();
-    prodEl.innerHTML = SCOPE.storeRows.map(r => {
+    // OPEN前店舗は生産性カードから除外
+    prodEl.innerHTML = SCOPE.storeRows.filter(r => !r.isBeforeOpen).map(r => {
       const ms = r.ms;
       const staffCount = ms ? ms.staff.filter(n => !DATA.staff_rows.find(s => s.store === r.sid && s.month === currentMonth && s.name === n && s.hidden)).length : 0;
       // 着地予測 ベース 1人月売
@@ -4759,16 +4791,20 @@ function drawMgmtCompanyTrend() {
     return ms ? (ms.total_sales || 0) : 0;
   };
   // 全店舗を STORES config から動的に取得 (新店舗 OPEN対応)
+  // ※ 24ヶ月内に1度でも存在した店舗のみ表示 (未開店の店舗は除外)
   const allStores = Object.keys(DATA.stores || {});
-  const datasets = allStores.map(sid => {
-    const st = DATA.stores[sid];
-    return {
-      label: st.name,
-      data: months24.map(m => Math.round(salesFor(sid, m) / 1000)),
-      backgroundColor: storeChartColor(sid),
-      stack: "s", borderRadius: 2,
-    };
-  });
+  const datasets = allStores
+    .filter(sid => months24.some(m => storeExistedInMonth(sid, m)))
+    .map(sid => {
+      const st = DATA.stores[sid];
+      return {
+        label: st.name,
+        // 店舗が未存在の月は null (バーが描かれない)
+        data: months24.map(m => storeExistedInMonth(sid, m) ? Math.round(salesFor(sid, m) / 1000) : null),
+        backgroundColor: storeChartColor(sid),
+        stack: "s", borderRadius: 2,
+      };
+    });
   window._chartMgmtTrend = new Chart(el.getContext("2d"), {
     type: "bar",
     data: { labels, datasets },
@@ -5739,11 +5775,13 @@ function drawVisitorMonthly() {
     type: "bar",
     data: {
       labels,
-      datasets: Object.keys(DATA.stores || {}).map(sid => ({
-        label: DATA.stores[sid].name,
-        data: months.map(m => customersFor(sid, m)),
-        backgroundColor: storeChartColor(sid),
-      }))
+      datasets: Object.keys(DATA.stores || {})
+        .filter(sid => months.some(m => storeExistedInMonth(sid, m)))
+        .map(sid => ({
+          label: DATA.stores[sid].name,
+          data: months.map(m => storeExistedInMonth(sid, m) ? customersFor(sid, m) : null),
+          backgroundColor: storeChartColor(sid),
+        }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -5768,13 +5806,15 @@ function drawRepeatRateMonthly() {
     type: "line",
     data: {
       labels,
-      datasets: Object.keys(DATA.stores || {}).map(sid => ({
-        label: DATA.stores[sid].name,
-        data: months.map(m => repeatFor(sid, m)),
-        borderColor: storeChartColor(sid),
-        backgroundColor: storeChartColorAlpha(sid, 0.1),
-        tension: 0.3, fill: false, pointRadius: 4,
-      }))
+      datasets: Object.keys(DATA.stores || {})
+        .filter(sid => months.some(m => storeExistedInMonth(sid, m)))
+        .map(sid => ({
+          label: DATA.stores[sid].name,
+          data: months.map(m => storeExistedInMonth(sid, m) ? repeatFor(sid, m) : null),
+          borderColor: storeChartColor(sid),
+          backgroundColor: storeChartColorAlpha(sid, 0.1),
+          tension: 0.3, fill: false, pointRadius: 4,
+        }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -5807,13 +5847,15 @@ function drawAvgTicketMonthly() {
     data: {
       labels,
       datasets: [
-        ...Object.keys(DATA.stores || {}).map(sid => ({
-          label: DATA.stores[sid].name,
-          data: months.map(m => ticketFor(sid, m)),
-          borderColor: storeChartColor(sid),
-          backgroundColor: storeChartColorAlpha(sid, 0.1),
-          tension: 0.3, fill: false, pointRadius: 4,
-        })),
+        ...Object.keys(DATA.stores || {})
+          .filter(sid => months.some(m => storeExistedInMonth(sid, m)))
+          .map(sid => ({
+            label: DATA.stores[sid].name,
+            data: months.map(m => storeExistedInMonth(sid, m) ? ticketFor(sid, m) : null),
+            borderColor: storeChartColor(sid),
+            backgroundColor: storeChartColorAlpha(sid, 0.1),
+            tension: 0.3, fill: false, pointRadius: 4,
+          })),
       ]
     },
     options: {
@@ -5846,13 +5888,15 @@ function drawNominationRateMonthly() {
     data: {
       labels,
       datasets: [
-        ...Object.keys(DATA.stores || {}).map(sid => ({
-          label: DATA.stores[sid].name,
-          data: months.map(m => nomRateFor(sid, m)),
-          borderColor: storeChartColor(sid),
-          backgroundColor: storeChartColorAlpha(sid, 0.1),
-          tension: 0.3, fill: false, pointRadius: 4,
-        })),
+        ...Object.keys(DATA.stores || {})
+          .filter(sid => months.some(m => storeExistedInMonth(sid, m)))
+          .map(sid => ({
+            label: DATA.stores[sid].name,
+            data: months.map(m => storeExistedInMonth(sid, m) ? nomRateFor(sid, m) : null),
+            borderColor: storeChartColor(sid),
+            backgroundColor: storeChartColorAlpha(sid, 0.1),
+            tension: 0.3, fill: false, pointRadius: 4,
+          })),
       ]
     },
     options: {
@@ -5936,21 +5980,28 @@ function drawMonthlyTrend() {
   };
 
   // 比較FY (前年) と対象FY (今年)、 各店舗を動的に
-  const cmpDatasets = allStoresMT.map(sid => ({
-    label: `${cmpLabel} ${DATA.stores[sid].name}`,
-    data: compareMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
-    backgroundColor: storeChartColorAlpha(sid, 0.35),
-    stack: "cmp", borderRadius: 2,
-  }));
-  const tgtDatasets = allStoresMT.map(sid => ({
-    label: `${tgtLabel} ${DATA.stores[sid].name}`,
-    data: targetMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
-    backgroundColor: storeChartColor(sid),
-    stack: "tgt", borderRadius: 2,
-  }));
-  // 全店舗の予算合計
+  // ※ 未開店だった FY の店舗は dataset 自体を作らない (ノイズ除外)
+  const cmpDatasets = allStoresMT
+    .filter(sid => storeExistedInFY(sid, prevFY))
+    .map(sid => ({
+      label: `${cmpLabel} ${DATA.stores[sid].name}`,
+      data: compareMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
+      backgroundColor: storeChartColorAlpha(sid, 0.35),
+      stack: "cmp", borderRadius: 2,
+    }));
+  const tgtDatasets = allStoresMT
+    .filter(sid => storeExistedInFY(sid, curFY))
+    .map(sid => ({
+      label: `${tgtLabel} ${DATA.stores[sid].name}`,
+      data: targetMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
+      backgroundColor: storeChartColor(sid),
+      stack: "tgt", borderRadius: 2,
+    }));
+  // 全店舗の予算合計 (curFY内に存在する店舗のみ)
   const tgtTarget = targetMonths.map(m =>
-    allStoresMT.reduce((a, sid) => a + ((monthlyBudgets[sid] || {})[m] || 0), 0) / 1000
+    allStoresMT
+      .filter(sid => storeExistedInMonth(sid, m))
+      .reduce((a, sid) => a + ((monthlyBudgets[sid] || {})[m] || 0), 0) / 1000
   );
 
   window._chartMT = new Chart(el.getContext("2d"), {
@@ -6012,11 +6063,15 @@ function drawDailySalesChart(month) {
     data: {
       labels: dates.map(x => x.slice(5)),
       datasets: [
-        ...Object.keys(DATA.stores || {}).map(sid => ({
-          label: DATA.stores[sid].name,
-          data: dates.map(x => (byDate[x] || {})[sid] || 0),
-          backgroundColor: storeChartColor(sid),
-        })),
+        // 当月内に存在した店舗のみ (OPEN前の店舗は除外)
+        ...Object.keys(DATA.stores || {})
+          .filter(sid => storeExistedInMonth(sid, month))
+          .filter(sid => dates.some(x => ((byDate[x] || {})[sid] || 0) > 0))  // 1日以上売上ある店舗のみ
+          .map(sid => ({
+            label: DATA.stores[sid].name,
+            data: dates.map(x => (byDate[x] || {})[sid] || 0),
+            backgroundColor: storeChartColor(sid),
+          })),
         { label: "目標 (合算)", data: dates.map(x => byDate[x].target), type: "line", borderColor: "#FBBF24", borderDash: [4,4], backgroundColor: "transparent", pointRadius: 0 }
       ]
     },
