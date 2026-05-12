@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HANABI Dashboard</title>
+<link rel="icon" type="image/png" href="assets/logo/hanabi-icon.png">
+<link rel="apple-touch-icon" href="assets/logo/hanabi-icon.png">
+<meta name="theme-color" content="#FAFAFA">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
@@ -32,7 +35,11 @@
   .firework-gradient { background: linear-gradient(90deg, #E53935 0%, #FF6B35 14%, #FFC107 28%, #43A047 42%, #29B6F6 56%, #1E88E5 70%, #8E24AA 84%, #E91E63 100%); }
   .elle-gradient { background: linear-gradient(135deg, #6E5BA8 0%, #D63384 100%); }
   .hanabi-gradient { background: linear-gradient(135deg, #000 0%, #1a0d2e 35%, #3d1845 70%, #5a1f4a 100%); }
-  .nicenail-gradient { background: linear-gradient(135deg, #5B21B6 0%, #9333EA 50%, #C084FC 100%); }
+  .nicenail-gradient { background: linear-gradient(135deg, #FFFFFF 0%, #FAF7F0 50%, #F0EAE0 100%); color: #1A1410 !important; border-bottom: 2px solid #1A1410; }
+  /* Same-element overrides (Tailwind text-white が同要素に付くので specificity を上げる) */
+  .nicenail-gradient.text-white,
+  .nicenail-gradient .text-white { color: #1A1410 !important; }
+  /* 透明度クラスはそのまま (opacity-80 は色相じゃなく不透明度なのでOK) */
   .kpi-num { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   .pct-good { color: var(--accent-green); }
   .pct-warn { color: var(--accent-yellow); }
@@ -1360,7 +1367,7 @@ function renderTopKpi() {
       return {
         title: "客単価 (店舗別)",
         main: `<div class="space-y-1.5 mt-1">${perStore.map(s => {
-          const color = s.sid === "miyakojima" ? "#D63384" : "#1E88E5";
+          const color = storeChartColor(s.sid);
           return `<div class="flex items-baseline justify-between">
             <span class="text-xs text-gray-500">${s.name}</span>
             <span class="kpi-num text-lg font-bold" style="color:${color}">${fmt(s.avg)}</span>
@@ -1404,7 +1411,7 @@ function renderTopKpi() {
       return {
         title: "指名率 (店舗別)",
         main: `<div class="space-y-1.5 mt-1">${perStore.map(s => {
-          const color = s.sid === "miyakojima" ? "#D63384" : "#1E88E5";
+          const color = storeChartColor(s.sid);
           const rateColor = s.rate >= 60 ? "var(--accent-green)" : s.rate >= 40 ? "var(--accent-yellow)" : "var(--accent-red)";
           return `<div class="flex items-baseline justify-between">
             <span class="text-xs" style="color:${color}">${s.name}</span>
@@ -1533,13 +1540,18 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
   if (!el) return;
   if (window._chartGA) window._chartGA.destroy();
   const labels = fys.map(fy => `FY${fy}${isFYInProgress(fy) ? "*" : ""}`);
-  const tsu = fys.map(fy => Math.round(fySales(fy, "tsunashima") / 1000));  // K円
-  const ele = fys.map(fy => Math.round(fySales(fy, "miyakojima") / 1000));
+  // 全店舗を STORES config から動的に
+  const allStores = Object.keys(DATA.stores || {});
+  const storeData = {};
+  for (const sid of allStores) {
+    storeData[sid] = fys.map(fy => Math.round(fySales(fy, sid) / 1000));
+  }
   // YoY% labels (displayed above bars) — skip in-progress FY (partial year comparison misleads)
   const yoyLabels = fys.map((fy, i) => {
     if (i === 0) return "";
-    if (isFYInProgress(fy)) return "";  // hide for partial-year (KPI card shows elapsed-adjusted version)
-    const cur = tsu[i] + ele[i], prev = tsu[i-1] + ele[i-1];
+    if (isFYInProgress(fy)) return "";
+    const cur = allStores.reduce((a, sid) => a + (storeData[sid][i] || 0), 0);
+    const prev = allStores.reduce((a, sid) => a + (storeData[sid][i-1] || 0), 0);
     if (!prev || !cur) return "";
     const pct = (cur / prev * 100 - 100);
     return (pct >= 0 ? "+" : "") + pct.toFixed(0) + "%";
@@ -1553,7 +1565,7 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       data.labels.forEach((lbl, i) => {
-        const total = (data.datasets[0].data[i] || 0) + (data.datasets[1].data[i] || 0);
+        const total = data.datasets.reduce((a, ds) => a + (ds.data[i] || 0), 0);
         if (!total || !yoyLabels[i]) return;
         const px = x.getPixelForValue(i);
         const py = y.getPixelForValue(total);
@@ -1564,15 +1576,15 @@ function drawGrowthAnnualChart(fys, fySales, isFYInProgress) {
       ctx.restore();
     }
   };
+  const datasets = allStores.map(sid => ({
+    label: DATA.stores[sid].name,
+    data: storeData[sid],
+    backgroundColor: storeChartColor(sid),
+    stack: "s", borderRadius: 4,
+  }));
   window._chartGA = new Chart(el.getContext("2d"), {
     type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: "Hanabi 綱島店", data: tsu, backgroundColor: "#1E88E5", stack: "s", borderRadius: 4 },
-        { label: "ELLE by Hanabi 宮古島店", data: ele, backgroundColor: "#D63384", stack: "s", borderRadius: 4 },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 24 } },
@@ -1596,17 +1608,17 @@ function drawGrowthCustomersChart(fys, fyCust, isFYInProgress) {
   // Exclude in-progress FY (partial-year point makes trend line plunge)
   const completedFys = fys.filter(fy => !isFYInProgress(fy));
   const labels = completedFys.map(fy => `FY${fy}`);
-  const tsu = completedFys.map(fy => fyCust(fy, "tsunashima"));
-  const ele = completedFys.map(fy => fyCust(fy, "miyakojima"));
+  const allStores = Object.keys(DATA.stores || {});
+  const datasets = allStores.map(sid => ({
+    label: DATA.stores[sid].name,
+    data: completedFys.map(fy => fyCust(fy, sid) || null),
+    borderColor: storeChartColor(sid),
+    backgroundColor: storeChartColorAlpha(sid, 0.1),
+    tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
+  }));
   window._chartGC = new Chart(el.getContext("2d"), {
     type: "line",
-    data: {
-      labels,
-      datasets: [
-        { label: "Hanabi 綱島店", data: tsu, borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, pointRadius: 5, fill: false },
-        { label: "ELLE by Hanabi 宮古島店", data: ele.map(v => v || null), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + "名" } } },
@@ -1630,17 +1642,21 @@ function drawGrowthAvgTicketChart(fys, fySales, fyCust, isFYInProgress) {
     const cust = fyCust(fy, sid);
     return cust > 0 ? Math.round(sales / cust) : null;
   };
-  const tsu = completedFys.map(fy => ticketFor(fy, "tsunashima"));
-  const ele = completedFys.map(fy => ticketFor(fy, "miyakojima"));
+  const allStores2 = Object.keys(DATA.stores || {});
+  const datasetsT = allStores2.map(sid => {
+    const st = DATA.stores[sid];
+    const subtitle = (st.departments && st.departments.length > 1) ? "トータルビューティ" : (st.departments?.[0] || "");
+    return {
+      label: `${st.name}${subtitle ? ` (${subtitle})` : ""}`,
+      data: completedFys.map(fy => ticketFor(fy, sid)),
+      borderColor: storeChartColor(sid),
+      backgroundColor: storeChartColorAlpha(sid, 0.1),
+      tension: 0.3, pointRadius: 5, fill: false, spanGaps: false,
+    };
+  });
   window._chartGT = new Chart(el.getContext("2d"), {
     type: "line",
-    data: {
-      labels,
-      datasets: [
-        { label: "Hanabi 綱島店 (ヘア)", data: tsu, borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, pointRadius: 5, fill: false },
-        { label: "ELLE by Hanabi 宮古島店 (トータルビューティ)", data: ele, borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, pointRadius: 5, fill: false, spanGaps: false },
-      ]
-    },
+    data: { labels, datasets: datasetsT },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: { y: { beginAtZero: false, ticks: { callback: v => "¥" + v.toLocaleString() } } },
@@ -3636,6 +3652,24 @@ function storeGradient(sid) {
   return "hanabi-gradient";
 }
 
+// 店舗ID → チャート色 (棒グラフ・折れ線等で使う solid color)
+const STORE_COLORS = {
+  tsunashima: "#1E88E5",  // Hanabi綱島: ブルー
+  miyakojima: "#D63384",  // ELLE宮古島: ピンク
+  shinyokohama: "#3D2A1F", // ナイスネイル新横浜: ダークウォームブラウン (ロゴ忠実)
+};
+function storeChartColor(sid) {
+  return STORE_COLORS[sid] || (DATA.stores?.[sid]?.ui_color) || "#6B7280";
+}
+function storeChartColorAlpha(sid, alpha = 0.1) {
+  const hex = storeChartColor(sid);
+  // hex → rgba
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const SORT_OPTIONS = [
   { key: "total_sales", label: "総売上" },
   { key: "tech_sales_nominated", label: "指名売上" },
@@ -4027,41 +4061,40 @@ function renderManagementTab() {
   `;
 
   // 店舗別 売上構成比 (ネスト型 doughnut)
-  // 内輪: 綱島 vs 宮古島
-  // 外輪: 綱島 (単一) + 宮古島の3部門 (ヘア/アイ/ネイル) を pink グラデーション で
+  // 内輪: 全店舗 (動的)
+  // 外輪: 各店舗の部門別分割 (departments が複数ある店舗のみ細分化、 ELLE宮古島など)
   const compositionEl = document.getElementById("mgmtCompositionChart");
   if (compositionEl) {
     if (window._chartMgmtComp) window._chartMgmtComp.destroy();
-    const tsuRow = SCOPE.storeRows.find(r => r.sid === "tsunashima");
-    const eleRow = SCOPE.storeRows.find(r => r.sid === "miyakojima");
-    // 内輪 データ
+    // 内輪 データ (全店舗)
     const innerData = [], innerLabels = [], innerColors = [];
-    if (tsuRow) {
-      innerData.push(tsuRow.sales);
-      innerLabels.push(tsuRow.store.name);
-      innerColors.push("#1E88E5");
+    for (const r of SCOPE.storeRows) {
+      innerData.push(r.sales);
+      innerLabels.push(r.store.name);
+      innerColors.push(storeChartColor(r.sid));
     }
-    if (eleRow) {
-      innerData.push(eleRow.sales);
-      innerLabels.push(eleRow.store.name);
-      innerColors.push("#D63384");
-    }
-    // 外輪 データ (宮古島 を部門別に分割)
+    // 外輪 データ (部門が複数の店舗は分割、 単一は店舗そのまま)
     const outerData = [], outerLabels = [], outerColors = [];
-    if (tsuRow) {
-      outerData.push(tsuRow.sales);
-      outerLabels.push(tsuRow.store.name);
-      outerColors.push("#1E88E5");
-    }
-    if (eleRow && eleRow.ms) {
-      const hairSales = (eleRow.ms.by_dept["ヘア"] || {}).sales || 0;
-      const eyeSales = (eleRow.ms.by_dept["アイ"] || {}).sales || 0;
-      const nailSales = (eleRow.ms.by_dept["ネイル"] || {}).sales || 0;
-      outerData.push(hairSales, eyeSales, nailSales);
-      outerLabels.push("宮古島 ヘア", "宮古島 アイ", "宮古島 ネイル");
-      // ピンク系で「ELLE 内」を視覚的に統一しつつ、 明度差を強めて視認性UP
-      // ヘア=濃いワイン/バーガンディ、 アイ=ELLE本色、 ネイル=ライトピンク
-      outerColors.push("#831843", "#D63384", "#F9A8D4");
+    for (const r of SCOPE.storeRows) {
+      const depts = r.store.departments || [];
+      const multi = depts.length > 1 && r.ms && !r.store.independent_dept;
+      if (multi) {
+        // 部門別グラデーション (店舗の色を中心に明度を変える)
+        const base = storeChartColor(r.sid);
+        const deptColors = base === "#D63384"
+          ? ["#831843", "#D63384", "#F9A8D4"]  // ELLE: 濃ワイン / ELLE本色 / ライトピンク
+          : [base, base, base];  // フォールバック
+        depts.forEach((d, i) => {
+          const sales = (r.ms.by_dept[d] || {}).sales || 0;
+          outerData.push(sales);
+          outerLabels.push(`${r.store.short || r.store.name} ${d}`);
+          outerColors.push(deptColors[i] || base);
+        });
+      } else {
+        outerData.push(r.sales);
+        outerLabels.push(r.store.name);
+        outerColors.push(storeChartColor(r.sid));
+      }
     }
     const total = innerData.reduce((a,b) => a+b, 0);
     window._chartMgmtComp = new Chart(compositionEl.getContext("2d"), {
@@ -4100,7 +4133,7 @@ function renderManagementTab() {
     const totalCust = SCOPE.storeRows.reduce((a, r) => a + r.customers, 0);
     const totalTarget = SCOPE.storeRows.reduce((a, r) => a + (r.monthlyTarget || 0), 0);
     compDetailsEl.innerHTML = SCOPE.storeRows.map(r => {
-      const color = r.sid === "miyakojima" ? "#D63384" : "#1E88E5";
+      const color = storeChartColor(r.sid);
       const pct = totalSales ? (r.sales / totalSales * 100) : 0;
       const custPct = totalCust ? (r.customers / totalCust * 100) : 0;
       const monthPct = r.monthlyTarget ? (r.sales / r.monthlyTarget * 100) : 0;
@@ -4473,17 +4506,20 @@ function drawMgmtCompanyTrend() {
     const ms = (DATA.monthly_by_store[sid] || {})[ym];
     return ms ? (ms.total_sales || 0) : 0;
   };
-  const tsu = months24.map(m => Math.round(salesFor("tsunashima", m) / 1000));
-  const ele = months24.map(m => Math.round(salesFor("miyakojima", m) / 1000));
+  // 全店舗を STORES config から動的に取得 (新店舗 OPEN対応)
+  const allStores = Object.keys(DATA.stores || {});
+  const datasets = allStores.map(sid => {
+    const st = DATA.stores[sid];
+    return {
+      label: st.name,
+      data: months24.map(m => Math.round(salesFor(sid, m) / 1000)),
+      backgroundColor: storeChartColor(sid),
+      stack: "s", borderRadius: 2,
+    };
+  });
   window._chartMgmtTrend = new Chart(el.getContext("2d"), {
     type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: "Hanabi 綱島店", data: tsu, backgroundColor: "#1E88E5", stack: "s", borderRadius: 2 },
-        { label: "ELLE by Hanabi 宮古島店", data: ele, backgroundColor: "#D63384", stack: "s", borderRadius: 2 },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
@@ -5373,10 +5409,11 @@ function drawVisitorMonthly() {
     type: "bar",
     data: {
       labels,
-      datasets: [
-        { label: "Hanabi 綱島店", data: months.map(m => customersFor("tsunashima", m)), backgroundColor: "#1E88E5" },
-        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => customersFor("miyakojima", m)), backgroundColor: "#D63384" },
-      ]
+      datasets: Object.keys(DATA.stores || {}).map(sid => ({
+        label: DATA.stores[sid].name,
+        data: months.map(m => customersFor(sid, m)),
+        backgroundColor: storeChartColor(sid),
+      }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -5401,10 +5438,13 @@ function drawRepeatRateMonthly() {
     type: "line",
     data: {
       labels,
-      datasets: [
-        { label: "Hanabi 綱島店", data: months.map(m => repeatFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => repeatFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-      ]
+      datasets: Object.keys(DATA.stores || {}).map(sid => ({
+        label: DATA.stores[sid].name,
+        data: months.map(m => repeatFor(sid, m)),
+        borderColor: storeChartColor(sid),
+        backgroundColor: storeChartColorAlpha(sid, 0.1),
+        tension: 0.3, fill: false, pointRadius: 4,
+      }))
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -5437,8 +5477,13 @@ function drawAvgTicketMonthly() {
     data: {
       labels,
       datasets: [
-        { label: "Hanabi 綱島店", data: months.map(m => ticketFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => ticketFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        ...Object.keys(DATA.stores || {}).map(sid => ({
+          label: DATA.stores[sid].name,
+          data: months.map(m => ticketFor(sid, m)),
+          borderColor: storeChartColor(sid),
+          backgroundColor: storeChartColorAlpha(sid, 0.1),
+          tension: 0.3, fill: false, pointRadius: 4,
+        })),
       ]
     },
     options: {
@@ -5471,8 +5516,13 @@ function drawNominationRateMonthly() {
     data: {
       labels,
       datasets: [
-        { label: "Hanabi 綱島店", data: months.map(m => nomRateFor("tsunashima", m)), borderColor: "#1E88E5", backgroundColor: "rgba(30,136,229,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
-        { label: "ELLE by Hanabi 宮古島店", data: months.map(m => nomRateFor("miyakojima", m)), borderColor: "#D63384", backgroundColor: "rgba(214,51,132,0.1)", tension: 0.3, fill: false, pointRadius: 4 },
+        ...Object.keys(DATA.stores || {}).map(sid => ({
+          label: DATA.stores[sid].name,
+          data: months.map(m => nomRateFor(sid, m)),
+          borderColor: storeChartColor(sid),
+          backgroundColor: storeChartColorAlpha(sid, 0.1),
+          tension: 0.3, fill: false, pointRadius: 4,
+        })),
       ]
     },
     options: {
@@ -5545,8 +5595,7 @@ function drawMonthlyTrend() {
   const monthLabels = ["5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月","4月"];
 
   const monthlyBudgets = (DATA.budgets || {}).monthly || {};
-  const tsuMonths = monthlyBudgets.tsunashima || {};
-  const eleMonths = monthlyBudgets.miyakojima || {};
+  const allStoresMT = Object.keys(DATA.stores || {});
 
   const salesFor = (sid, ym) => {
     const ds = (DATA.daily_by_store[sid] || {})[ym] || [];
@@ -5556,23 +5605,31 @@ function drawMonthlyTrend() {
     return ms ? ms.total_sales : null;
   };
 
-  const tgtTsu = targetMonths.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
-  const tgtEle = targetMonths.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
-  const cmpTsu = compareMonths.map(m => { const v = salesFor("tsunashima", m); return v == null ? null : v / 1000; });
-  const cmpEle = compareMonths.map(m => { const v = salesFor("miyakojima", m); return v == null ? null : v / 1000; });
-  const tgtTarget = targetMonths.map(m => ((tsuMonths[m] || 0) + (eleMonths[m] || 0)) / 1000);
+  // 比較FY (前年) と対象FY (今年)、 各店舗を動的に
+  const cmpDatasets = allStoresMT.map(sid => ({
+    label: `${cmpLabel} ${DATA.stores[sid].name}`,
+    data: compareMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
+    backgroundColor: storeChartColorAlpha(sid, 0.35),
+    stack: "cmp", borderRadius: 2,
+  }));
+  const tgtDatasets = allStoresMT.map(sid => ({
+    label: `${tgtLabel} ${DATA.stores[sid].name}`,
+    data: targetMonths.map(m => { const v = salesFor(sid, m); return v == null ? null : v / 1000; }),
+    backgroundColor: storeChartColor(sid),
+    stack: "tgt", borderRadius: 2,
+  }));
+  // 全店舗の予算合計
+  const tgtTarget = targetMonths.map(m =>
+    allStoresMT.reduce((a, sid) => a + ((monthlyBudgets[sid] || {})[m] || 0), 0) / 1000
+  );
 
   window._chartMT = new Chart(el.getContext("2d"), {
     type: "bar",
     data: {
       labels: monthLabels,
       datasets: [
-        // FY25 (lighter, prior year)
-        { label: `${cmpLabel} Hanabi 綱島店`, data: cmpTsu, backgroundColor: "rgba(30,136,229,0.35)", stack: "cmp", borderRadius: 2 },
-        { label: `${cmpLabel} ELLE by Hanabi 宮古島店`, data: cmpEle, backgroundColor: "rgba(214,51,132,0.35)", stack: "cmp", borderRadius: 2 },
-        // Target FY (saturated, current)
-        { label: `${tgtLabel} Hanabi 綱島店`, data: tgtTsu, backgroundColor: "#1E88E5", stack: "tgt", borderRadius: 2 },
-        { label: `${tgtLabel} ELLE by Hanabi 宮古島店`, data: tgtEle, backgroundColor: "#D63384", stack: "tgt", borderRadius: 2 },
+        ...cmpDatasets,
+        ...tgtDatasets,
         // Target FY budget overlay
         { label: `${tgtLabel} 予算`, data: tgtTarget, type: "line", borderColor: "#1A1A1A", borderWidth: 2, borderDash: [4,4], backgroundColor: "transparent", pointRadius: 3, pointBackgroundColor: "#1A1A1A", tension: 0.2, stack: "_line" },
       ]
@@ -5606,7 +5663,10 @@ function drawDailySalesChart(month) {
   }, 0);
   const byDate = {};
   allDays.forEach(d => {
-    if (!byDate[d.date]) byDate[d.date] = { tsunashima: 0, miyakojima: 0, target: fyDailyTarget };
+    if (!byDate[d.date]) {
+      byDate[d.date] = { target: fyDailyTarget };
+      for (const sid of Object.keys(DATA.stores || {})) byDate[d.date][sid] = 0;
+    }
     byDate[d.date][d.sid] = d.sales;
   });
   let dates = Object.keys(byDate).sort();
@@ -5622,8 +5682,11 @@ function drawDailySalesChart(month) {
     data: {
       labels: dates.map(x => x.slice(5)),
       datasets: [
-        { label: "Hanabi 綱島店", data: dates.map(x => byDate[x].tsunashima), backgroundColor: "#1E88E5" },
-        { label: "ELLE by Hanabi 宮古島店", data: dates.map(x => byDate[x].miyakojima), backgroundColor: "#D63384" },
+        ...Object.keys(DATA.stores || {}).map(sid => ({
+          label: DATA.stores[sid].name,
+          data: dates.map(x => (byDate[x] || {})[sid] || 0),
+          backgroundColor: storeChartColor(sid),
+        })),
         { label: "目標 (合算)", data: dates.map(x => byDate[x].target), type: "line", borderColor: "#FBBF24", borderDash: [4,4], backgroundColor: "transparent", pointRadius: 0 }
       ]
     },
