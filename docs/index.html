@@ -897,6 +897,10 @@
           <span class="text-xs text-gray-600">備考</span>
           <textarea id="rf_notes" rows="2" class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1"></textarea>
         </label>
+        <label class="block">
+          <span class="text-xs text-gray-600">Notion ページ URL <span class="text-gray-400">(面接記録等)</span></span>
+          <input type="url" id="rf_notion_url" placeholder="https://www.notion.so/..." class="w-full border border-gray-300 rounded px-2 py-1.5 mt-1 text-xs" />
+        </label>
         <div class="flex justify-between items-center pt-3 border-t border-gray-100">
           <button type="button" id="rf_delete" class="hidden text-xs text-red-600 hover:text-red-800 underline">この候補を削除</button>
           <div class="flex gap-2 ml-auto">
@@ -2312,9 +2316,13 @@ function renderRecruitTab() {
         const profiles = (DATA.staff_profiles && DATA.staff_profiles.profiles) || {};
         const hasProfile = c.name && profiles[c.name];
         const onboarding = currentRole === "master" && c.status === "入社" && c.name && !hasProfile;
-        return `<tr class="border-b border-gray-50 hover:bg-gray-50 ${currentRole === 'master' ? 'cursor-pointer' : ''}" data-rid="${c.id || ''}">
+        const nameDisplay = currentRole === "master"
+          ? `<a class="recruit-name-link" data-rid="${c.id || ''}">${c.name || "—"}</a>`
+          : (c.name || "—");
+        const notion = c.notion_url ? `<a href="${c.notion_url}" target="_blank" class="text-[11px] text-blue-600 hover:underline whitespace-nowrap ml-1" onclick="event.stopPropagation()">📝 Notion ↗</a>` : "";
+        return `<tr class="border-b border-gray-50 hover:bg-gray-50" data-rid="${c.id || ''}">
         <td class="py-2 px-3 text-xs text-gray-600 whitespace-nowrap">${c.applied_date || "—"}</td>
-        <td class="py-2 px-3 font-semibold whitespace-nowrap">${c.name || "—"}${c.kana ? ` <span class="text-[11px] text-gray-400">${c.kana}</span>` : ""}${hasProfile ? ` <span class="text-[10px] text-green-600 ml-1" title="プロフィール登録済">●</span>` : ""}</td>
+        <td class="py-2 px-3 font-semibold whitespace-nowrap">${nameDisplay}${c.kana ? ` <span class="text-[11px] text-gray-400">${c.kana}</span>` : ""}${hasProfile ? ` <span class="text-[10px] text-green-600 ml-1" title="プロフィール登録済">●</span>` : ""}${notion}</td>
         <td class="py-2 px-3 text-xs">${c.role || "—"}</td>
         <td class="py-2 px-3 text-xs">${c.store_pref || "—"}</td>
         <td class="py-2 px-3 text-xs">${c.experience_years != null ? c.experience_years + "年" : "—"}</td>
@@ -2324,8 +2332,25 @@ function renderRecruitTab() {
       </tr>`;}).join("")}</tbody>
     </table>`;
     if (currentRole === "master") {
-      root.querySelectorAll("tr[data-rid]").forEach(tr => {
-        tr.addEventListener("click", () => openRecruitModal(tr.dataset.rid));
+      // 名前クリックで編集モーダル (行全体ではなく)
+      root.querySelectorAll(".recruit-name-link").forEach(a => {
+        a.style.cursor = "pointer";
+        a.style.color = "#1A1A1A";
+        a.style.borderBottom = "1px dotted #9CA3AF";
+        a.style.paddingBottom = "1px";
+        a.addEventListener("mouseenter", () => {
+          a.style.color = "#3B82F6";
+          a.style.borderBottom = "1px solid #3B82F6";
+        });
+        a.addEventListener("mouseleave", () => {
+          a.style.color = "#1A1A1A";
+          a.style.borderBottom = "1px dotted #9CA3AF";
+        });
+        a.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openRecruitModal(a.dataset.rid);
+        });
       });
     }
   };
@@ -2396,6 +2421,8 @@ function openRecruitModal(id) {
   document.getElementById("rf_kana").value = (cur && cur.kana) || "";
   document.getElementById("rf_experience_years").value = cur && cur.experience_years != null ? cur.experience_years : "";
   document.getElementById("rf_notes").value = (cur && cur.notes) || "";
+  const notionUrlEl = document.getElementById("rf_notion_url");
+  if (notionUrlEl) notionUrlEl.value = (cur && cur.notion_url) || "";
   fillSel("rf_status", settings.statuses || [], cur ? cur.status : "応募");
   fillSel("rf_role", settings.roles || [], cur ? cur.role : "");
   fillSel("rf_store_pref", settings.stores || [], cur ? cur.store_pref : "");
@@ -2422,7 +2449,10 @@ async function saveRecruitForm(e) {
     source: document.getElementById("rf_source").value,
     status: document.getElementById("rf_status").value,
     notes: document.getElementById("rf_notes").value.trim(),
+    notion_url: (document.getElementById("rf_notion_url")?.value || "").trim() || undefined,
   };
+  // Remove undefined keys
+  Object.keys(candidate).forEach(k => candidate[k] === undefined && delete candidate[k]);
   if (!candidate.name || !candidate.applied_date || !candidate.status) return;
   // Optimistic UI: save to localStorage + DATA immediately
   const o = _loadRecruitOverrides();
