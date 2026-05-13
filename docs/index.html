@@ -2329,9 +2329,10 @@ function renderRecruitTab() {
       });
     }
   };
-  if (filterSel && !filterSel._wired) {
-    filterSel.addEventListener("change", drawList);
-    filterSel._wired = true;
+  // onchange 代入で 毎回最新の drawList クロージャに差し替え
+  // (addEventListener + _wired ガードだと FY タブ切替後に古いクロージャが残るバグあり)
+  if (filterSel) {
+    filterSel.onchange = drawList;
   }
   // Show admin actions for master
   const addBtn = document.getElementById("recruitAddBtn");
